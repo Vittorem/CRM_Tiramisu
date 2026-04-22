@@ -73,9 +73,27 @@ export const AppLayout = () => {
     return (
         <Layout style={{ minHeight: '100vh', paddingBottom: isMobile ? 65 : 0, overflowX: 'hidden' }}>
             {!isMobile && (
-                <Sider trigger={null} collapsible collapsed={collapsed} breakpoint="md" onBreakpoint={setCollapsed}
-                    style={{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 }}>
-                    <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                <Sider 
+                    trigger={null} 
+                    collapsible 
+                    collapsed={collapsed} 
+                    breakpoint="xl" 
+                    onBreakpoint={(broken) => {
+                        if (broken) setCollapsed(true);
+                    }}
+                    width={200}
+                    collapsedWidth={80}
+                    style={{ 
+                        overflow: 'auto', 
+                        height: '100vh', 
+                        position: 'fixed', 
+                        left: 0, 
+                        top: 0, 
+                        bottom: 0, 
+                        zIndex: 100 
+                    }}
+                >
+                    <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: collapsed ? 10 : 14 }}>
                         {collapsed ? 'CRM' : 'TIRAMISÚ'}
                     </div>
                     <Menu
@@ -88,10 +106,25 @@ export const AppLayout = () => {
                 </Sider>
             )}
 
-            <Layout style={{ marginLeft: isMobile ? 0 : (collapsed ? 80 : 200), transition: 'margin-left 0.2s', minHeight: '100vh' }}>
-                <Header style={{ padding: '0 16px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,21,41,0.08)', position: 'sticky', top: 0, zIndex: 10 }}>
+            <Layout style={{ 
+                marginLeft: isMobile ? 0 : (collapsed ? 80 : 200), 
+                transition: 'margin-left 0.2s', 
+                minHeight: '100vh',
+                width: '100%' 
+            }}>
+                <Header style={{ 
+                    padding: isMobile ? '0 12px' : '0 24px', 
+                    background: colorBgContainer, 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    boxShadow: '0 1px 4px rgba(0,21,41,0.08)', 
+                    position: 'sticky', 
+                    top: 0, 
+                    zIndex: 10 
+                }}>
                     {isMobile ? (
-                        <div style={{ fontWeight: 800, fontSize: 18, color: '#1677ff' }}>TIRAMISÚ CRM</div>
+                        <div style={{ fontWeight: 800, fontSize: 18, color: '#colorPrimary' || '#d4a373' }}>TIRAMISÚ CRM</div>
                     ) : (
                         <Button
                             type="text"
@@ -100,10 +133,10 @@ export const AppLayout = () => {
                             style={{ fontSize: '16px', width: 64, height: 64 }}
                         />
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16 }}>
                         <GlobalAlerts />
                         <Button type="text" onClick={toggleDarkMode} icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />} />
-                        <span style={{ fontWeight: 500, display: isMobile ? 'none' : 'inline', color: isDarkMode ? '#e6e6e6' : 'inherit' }}>{user?.displayName}</span>
+                        <span style={{ fontWeight: 500, display: isMobile ? 'none' : 'inline', color: isDarkMode ? '#e6e6e6' : 'inherit', fontSize: 14 }}>{user?.displayName}</span>
                         <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                             <Avatar src={user?.photoURL} icon={<UserOutlined />} style={{ cursor: 'pointer' }} />
                         </Dropdown>
@@ -112,8 +145,8 @@ export const AppLayout = () => {
 
                 <Content
                     style={{
-                        margin: isMobile ? '12px' : '24px 16px',
-                        padding: isMobile ? 12 : 24,
+                        margin: isMobile ? '12px' : '16px',
+                        padding: isMobile ? 12 : 20,
                         minHeight: 280,
                         background: colorBgContainer,
                         borderRadius: borderRadiusLG,

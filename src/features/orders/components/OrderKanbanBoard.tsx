@@ -77,8 +77,8 @@ function KanbanColumn({ status, orders, onEdit }: { status: OrderStatus; orders:
     const { token: { colorBgLayout } } = theme.useToken();
 
     return (
-        <div ref={setNodeRef} style={{ flex: 1, background: colorBgLayout, padding: 8, borderRadius: 8, minWidth: 250, display: 'flex', flexDirection: 'column' }}>
-            <Typography.Title level={5} style={{ margin: '0 0 12px 0', textAlign: 'center' }}>
+        <div ref={setNodeRef} style={{ flex: 1, background: colorBgLayout, padding: '8px 4px', borderRadius: 8, minWidth: 220, display: 'flex', flexDirection: 'column' }}>
+            <Typography.Title level={5} style={{ margin: '0 0 12px 0', textAlign: 'center', fontSize: 14 }}>
                 {status} ({orders.length})
             </Typography.Title>
             <div style={{ flex: 1 }}>
@@ -110,7 +110,7 @@ export const OrderKanbanBoard = ({ orders, onStatusChange, onEditOrder }: Kanban
 
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16, height: 'calc(100vh - 200px)' }}>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 16, height: 'calc(100vh - 180px)', minHeight: 400 }}>
                 {KANBAN_STATUSES.map(status => (
                     <KanbanColumn
                         key={status}

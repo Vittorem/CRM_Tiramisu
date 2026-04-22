@@ -49,8 +49,14 @@ const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088FE', '#00C49F'
 
 function KPICard(props: { title: string; value: string | number; prefix?: React.ReactNode; suffix?: React.ReactNode; color?: string }) {
     return (
-        <Card bordered={false} style={{ borderTop: `3px solid ${props.color || '#1890ff'}` }}>
-            <Statistic title={props.title} value={props.value} prefix={props.prefix} suffix={props.suffix} />
+        <Card bordered={false} style={{ borderTop: `3px solid ${props.color || '#1890ff'}`, borderRadius: 12 }} styles={{ body: { padding: '12px 16px' } }}>
+            <Statistic 
+                title={<span style={{ fontSize: 13, color: '#8c8c8c' }}>{props.title}</span>} 
+                value={props.value} 
+                prefix={props.prefix} 
+                suffix={props.suffix} 
+                valueStyle={{ fontSize: 20, fontWeight: 700 }}
+            />
         </Card>
     );
 }

@@ -60,9 +60,9 @@ function App() {
                         colorInfo: '#d4a373',
                         borderRadius: 12, // Softer curves for premium feel
                         fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
-                        controlHeight: 44, // Generous touch target size for mobile
-                        controlHeightLG: 52, // Large buttons
-                        fontSize: 16, // Better readability on mobile, avoids iOS automatic zoom
+                        controlHeight: 40,
+                        controlHeightLG: 48,
+                        fontSize: 14, // Standard CRM font size for better density
                         boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)', // Soft diffuse shadows
                         colorBgBase: isDarkMode ? '#141414' : '#fffbf5', // Cream default for light, dark gray for dark
                     },

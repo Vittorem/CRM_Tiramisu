@@ -268,7 +268,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     return (
         <Drawer
             title={initialValues ? 'Editar Pedido' : 'Nuevo Pedido'}
-            width={isMobile ? '100%' : 720}
+            width={isMobile ? '100%' : 640}
             placement={isMobile ? 'bottom' : 'right'}
             height={isMobile ? '90vh' : '100%'}
             onClose={onClose}
