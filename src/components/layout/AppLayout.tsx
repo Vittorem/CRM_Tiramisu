@@ -124,7 +124,7 @@ export const AppLayout = () => {
                     zIndex: 10 
                 }}>
                     {isMobile ? (
-                        <div style={{ fontWeight: 800, fontSize: 18, color: '#colorPrimary' || '#d4a373' }}>TIRAMISÚ CRM</div>
+                        <div style={{ fontWeight: 800, fontSize: 18, color: colorPrimary }}>TIRAMISÚ CRM</div>
                     ) : (
                         <Button
                             type="text"
