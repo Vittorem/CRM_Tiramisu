@@ -39,7 +39,14 @@ function SortableItem({ order, onClick }: { order: Order; onClick: () => void })
             <Card size="small" hoverable onClick={onClick} styles={{ body: { padding: 12 } }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Typography.Text strong>{order.customerName}</Typography.Text>
-                    <Tag color="blue">${order.total}</Tag>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                        {order.paymentStatus && order.paymentStatus !== 'No Pagado' && (
+                            <Tag color={order.paymentStatus === 'Pagado' ? 'success' : 'warning'} style={{ margin: 0 }}>
+                                {order.paymentStatus === 'Pagado' ? '$' : '1/2'}
+                            </Tag>
+                        )}
+                        <Tag color="blue" style={{ margin: 0 }}>${order.total}</Tag>
+                    </div>
                 </div>
                 <div style={{ fontSize: 12, color: '#666' }}>
                     {order.items && order.items.length > 0 ? (

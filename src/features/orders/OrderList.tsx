@@ -129,6 +129,16 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
             render: (val: number) => `$${val.toFixed(2)}`,
         },
         {
+            title: 'Pago',
+            dataIndex: 'paymentStatus',
+            key: 'paymentStatus',
+            render: (paymentStatus?: string) => {
+                if (paymentStatus === 'Pagado') return <Tag color="success">Pagado</Tag>;
+                if (paymentStatus === 'Pago Parcial') return <Tag color="warning">Pago Parcial</Tag>;
+                return <Tag color="default">No Pagado</Tag>;
+            },
+        },
+        {
             title: 'Entrega',
             dataIndex: 'deliveryDate',
             key: 'deliveryDate',
@@ -296,7 +306,12 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'flex-start' }}>
                                                 <strong style={{ fontSize: 16, lineHeight: 1.2, color: '#333' }}>{item.customerName}</strong>
-                                                <Tag style={{ margin: 0, borderRadius: 12, fontWeight: 600 }} color={STATUS_COLOR[item.status] || 'default'}>{item.status}</Tag>
+                                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                    <Tag style={{ margin: 0, borderRadius: 12, fontWeight: 600 }} color={item.paymentStatus === 'Pagado' ? 'success' : item.paymentStatus === 'Pago Parcial' ? 'warning' : 'default'}>
+                                                        {item.paymentStatus || 'No Pagado'}
+                                                    </Tag>
+                                                    <Tag style={{ margin: 0, borderRadius: 12, fontWeight: 600 }} color={STATUS_COLOR[item.status] || 'default'}>{item.status}</Tag>
+                                                </div>
                                             </div>
                                             <div style={{ color: '#555', fontSize: 14, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {/* #6 — Delivery method icon + date */}

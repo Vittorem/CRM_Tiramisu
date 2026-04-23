@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Alert, Checkbox, Grid, TimePicker } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
-import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, SystemSettings } from '../../../types';
+import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, SystemSettings, PAYMENT_STATUSES } from '../../../types';
 import { getPointsCostForProduct } from '../../../utils/loyalty';
 import dayjs from 'dayjs';
 
@@ -88,6 +88,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             } else {
                 form.setFieldsValue({
                     status: 'Pendiente',
+                    paymentStatus: 'No Pagado',
                     items: [{ quantity: 1, unitPriceAtSale: 0, redeemLoyalty: false }],
                     shippingCost: 0,
                     discountValue: 0,
@@ -484,13 +485,26 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     </Typography.Title>
                 </div>
 
-                <Form.Item name="status" label="Estado Inicial">
-                    <Select>
-                        {ORDER_STATUSES.map(s => (
-                            <Option key={s} value={s}>{s}</Option>
-                        ))}
-                    </Select>
-                </Form.Item>
+                <Row gutter={16}>
+                    <Col xs={24} md={12}>
+                        <Form.Item name="status" label="Estado Inicial">
+                            <Select>
+                                {ORDER_STATUSES.map(s => (
+                                    <Option key={s} value={s}>{s}</Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                        <Form.Item name="paymentStatus" label="Estado de Pago">
+                            <Select>
+                                {PAYMENT_STATUSES.map(s => (
+                                    <Option key={s} value={s}>{s}</Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
 
                 <Form.Item name="notes" label="Notas del Pedido">
                     <TextArea rows={3} />

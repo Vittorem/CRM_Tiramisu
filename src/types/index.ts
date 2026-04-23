@@ -95,6 +95,14 @@ export interface OrderItem {
     pointsRedeemed?: number; // Tracking points used for exactly this item
 }
 
+export const PAYMENT_STATUSES = [
+    'No Pagado',
+    'Pago Parcial',
+    'Pagado',
+] as const;
+
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
 export interface Order extends BaseEntity {
     customerId: string;
     customerName?: string;
@@ -124,6 +132,7 @@ export interface Order extends BaseEntity {
 
     notes?: string;
     status: OrderStatus;
+    paymentStatus?: PaymentStatus;
 
     // Loyalty Program tracking
     pointsEarned?: number;
