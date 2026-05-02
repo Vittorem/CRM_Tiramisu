@@ -305,42 +305,7 @@ export const OrdersPage = () => {
                 </div>
             )}
 
-            {/* #2 — Compact mobile summary */}
-            {isMobile && !loadingOrders && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
-                    {(() => {
-                        const mobileOrders = filteredOrders.filter(o => o.status !== 'Entregado');
-                        const ready = mobileOrders.filter(o => o.status === 'Listo para entregar').length;
-                        const inPrep = mobileOrders.filter(o => o.status === 'En preparación').length;
-                        const confirmed = mobileOrders.filter(o => o.status === 'Confirmado').length;
-                        const pending = mobileOrders.filter(o => o.status === 'Pendiente').length;
-                        return (
-                            <>
-                                <div style={{ background: '#e6fffb', border: '1px solid #87e8de', borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#13c2c2' }}>{ready}</div>
-                                    <div style={{ fontSize: 10, color: '#006d75' }}>Listos</div>
-                                </div>
-                                <div style={{ background: '#f9f0ff', border: '1px solid #d3adf7', borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#722ed1' }}>{inPrep}</div>
-                                    <div style={{ fontSize: 10, color: '#531dab' }}>Preparando</div>
-                                </div>
-                                <div style={{ background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#2f54eb' }}>{confirmed}</div>
-                                    <div style={{ fontSize: 10, color: '#1d39c4' }}>Confirmados</div>
-                                </div>
-                                <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#fa8c16' }}>{pending}</div>
-                                    <div style={{ fontSize: 10, color: '#d46b08' }}>Pendientes</div>
-                                </div>
-                                <div style={{ background: '#fafafa', border: '1px solid #d9d9d9', borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 70, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{mobileOrders.length}</div>
-                                    <div style={{ fontSize: 10, color: '#888' }}>Total</div>
-                                </div>
-                            </>
-                        );
-                    })()}
-                </div>
-            )}
+
 
             {loadingOrders || loadingCustomers ? (
                 <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 8 }} /></div>

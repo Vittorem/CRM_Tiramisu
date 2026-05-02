@@ -296,42 +296,37 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                         <Card 
                                             size="small" 
                                             style={{ 
-                                                marginBottom: 12, 
+                                                marginBottom: 8, 
                                                 width: '100%', 
-                                                borderRadius: 12, 
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)', 
+                                                borderRadius: 10, 
+                                                boxShadow: 'none', 
                                                 border: '1px solid #f0f0f0' 
                                             }}
-                                            bodyStyle={{ padding: '16px' }}
+                                            bodyStyle={{ padding: '12px 16px', cursor: 'pointer' }}
+                                            onClick={() => onEdit(item)}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'flex-start' }}>
-                                                <strong style={{ fontSize: 16, lineHeight: 1.2, color: '#333' }}>{item.customerName}</strong>
-                                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                                    <Tag style={{ margin: 0, borderRadius: 12, fontWeight: 600 }} color={item.paymentStatus === 'Pagado' ? 'success' : item.paymentStatus === 'Pago Parcial' ? 'warning' : 'default'}>
-                                                        {item.paymentStatus || 'No Pagado'}
-                                                    </Tag>
-                                                    <Tag style={{ margin: 0, borderRadius: 12, fontWeight: 600 }} color={STATUS_COLOR[item.status] || 'default'}>{item.status}</Tag>
-                                                </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                                <strong style={{ fontSize: 16, color: '#222' }}>{item.customerName}</strong>
+                                                <strong style={{ fontSize: 16, color: '#222' }}>${item.total.toFixed(2)}</strong>
                                             </div>
-                                            <div style={{ color: '#555', fontSize: 14, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                {/* #6 — Delivery method icon + date */}
-                                                <div>{item.deliveryMethod === 'Envío' ? '🚚' : '🏪'} {toDay(item.deliveryDate)?.format('DD/MM/YYYY HH:mm')}</div>
-                                                {/* #4 — Products WITH flavor */}
-                                                <div>📦 {getProductText(item)}</div>
-                                                {/* #8 — Notes preview */}
-                                                {item.notes && (
-                                                    <div style={{ fontSize: 13, color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                                                        📝 {item.notes}
-                                                    </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: '#666' }}>
+                                                <div>{item.deliveryMethod === 'Envío' ? '🚚' : '🏪'} {toDay(item.deliveryDate)?.format('DD/MM HH:mm')}</div>
+                                                {item.paymentStatus !== 'Pagado' ? (
+                                                    <span style={{ color: item.paymentStatus === 'Pago Parcial' ? '#faad14' : '#ff4d4f', fontWeight: 500 }}>
+                                                        {item.paymentStatus === 'Pago Parcial' ? '⏳ Parcial' : '❌ No Pago'}
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: '#52c41a', fontWeight: 500 }}>✅ Pagado</span>
                                                 )}
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
-                                                <strong style={{ fontSize: 18, color: '#333' }}>${item.total.toFixed(2)}</strong>
-                                                <Space>
-                                                    <Button type="text" style={{ background: '#f5f5f5', color: '#1890ff', border: 'none' }} icon={<EditOutlined />} onClick={() => onEdit(item)} />
-                                                    <Button type="text" style={{ background: '#fff1f0', color: '#ff4d4f', border: 'none' }} icon={<DeleteOutlined />} onClick={() => handleDeleteConfirm(item.id, item.customerName || 'este cliente')} />
-                                                </Space>
+                                            <div style={{ color: '#555', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                <span style={{ opacity: 0.7, marginRight: 4 }}>📦</span>{getProductText(item)}
                                             </div>
+                                            {item.notes && (
+                                                <div style={{ fontSize: 12, color: '#999', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <span style={{ opacity: 0.7, marginRight: 4 }}>📝</span>{item.notes}
+                                                </div>
+                                            )}
                                         </Card>
                                     </SwipeableListItem>
                                 </>
