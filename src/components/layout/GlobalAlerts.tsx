@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Badge, Drawer, List, Button, Typography, Tag, Space } from 'antd';
-import { BellOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { Badge, Drawer, List, Button, Typography, Tag, Space, message } from 'antd';
+import { BellOutlined, ShoppingOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import { useFirestoreSubscription } from '../../hooks/useFirestore';
+import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
+import { arrayUnion } from 'firebase/firestore';
 import { Order, Customer, InventoryItem, B2BDeliverySchedule } from '../../types';
 import { generateIntelligentAlerts, PeriodMetrics } from '../../utils/intelligentAlerts';
 import { getDeliveredOrdersInRange } from '../../utils/dateHelpers';
@@ -14,6 +15,7 @@ export const GlobalAlerts = () => {
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
     const { data: inventory } = useFirestoreSubscription<InventoryItem>('inventory');
     const { data: b2bSchedules } = useFirestoreSubscription<B2BDeliverySchedule>('b2b_schedules');
+    const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
 
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();
@@ -60,6 +62,18 @@ export const GlobalAlerts = () => {
         navigate('/orders', { state: { createNew: true, prefillCustomerId: customerId } });
     };
 
+    const handleDismissB2BAlert = async (scheduleId: string, targetDateStr: string) => {
+        try {
+            await updateSchedule(scheduleId, {
+                dismissedDates: arrayUnion(targetDateStr) as unknown as string[]
+            });
+            message.success('Notificación omitida');
+        } catch (error) {
+            console.error('Error al omitir notificación', error);
+            message.error('Error al omitir la notificación');
+        }
+    };
+
     return (
         <>
             <Badge count={totalAlerts} size="small" offset={[-2, 6]}>
@@ -99,6 +113,15 @@ export const GlobalAlerts = () => {
                                         return (
                                             <List.Item
                                                 actions={[
+                                                    <Button
+                                                        key="dismiss"
+                                                        type="text"
+                                                        size="small"
+                                                        icon={<StopOutlined />}
+                                                        onClick={() => handleDismissB2BAlert(alert.schedule.id, alert.targetDateStr)}
+                                                    >
+                                                        Omitir
+                                                    </Button>,
                                                     <Button
                                                         key="create"
                                                         type="primary"

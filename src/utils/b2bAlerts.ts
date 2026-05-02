@@ -9,6 +9,10 @@ export interface B2BDeliveryAlert {
     urgency: 'today' | 'tomorrow';
     /** true if a matching order already exists for this delivery window */
     hasOrder: boolean;
+    /** true if the user manually dismissed this alert for this date */
+    isDismissed: boolean;
+    /** The target date in YYYY-MM-DD format */
+    targetDateStr: string;
 }
 
 /**
@@ -69,22 +73,30 @@ export function computeB2BAlerts(
         // Check today
         if (schedule.deliveryDays.includes(today)) {
             const has = hasMatchingOrder(orders, schedule.customerId, todayDate);
+            const targetDateStr = todayDate.format('YYYY-MM-DD');
+            const isDismissed = schedule.dismissedDates?.includes(targetDateStr) || false;
             alerts.push({
                 schedule,
                 deliveryDay: today,
                 urgency: 'today',
                 hasOrder: has,
+                isDismissed,
+                targetDateStr,
             });
         }
 
         // Check tomorrow
         if (schedule.deliveryDays.includes(tomorrow)) {
             const has = hasMatchingOrder(orders, schedule.customerId, tomorrowDate);
+            const targetDateStr = tomorrowDate.format('YYYY-MM-DD');
+            const isDismissed = schedule.dismissedDates?.includes(targetDateStr) || false;
             alerts.push({
                 schedule,
                 deliveryDay: tomorrow,
                 urgency: 'tomorrow',
                 hasOrder: has,
+                isDismissed,
+                targetDateStr,
             });
         }
     }
@@ -100,13 +112,25 @@ export function computeB2BAlerts(
 }
 
 /**
- * Get only the alerts where an order is still missing (actionable alerts).
+ * Get only the alerts where an order is still missing (actionable alerts) and it hasn't been dismissed.
  */
 export function getPendingB2BAlerts(
     schedules: B2BDeliverySchedule[],
     orders: Order[]
 ): B2BDeliveryAlert[] {
-    return computeB2BAlerts(schedules, orders).filter(a => !a.hasOrder);
+    return computeB2BAlerts(schedules, orders).filter(a => !a.hasOrder && !a.isDismissed);
+}
+
+export function getDateForDayThisWeek(dayOfWeek: DayOfWeek): dayjs.Dayjs | null {
+    const today = dayjs();
+    const jsDayIndex = Object.entries(JS_DAY_TO_DAY_OF_WEEK)
+        .find(([_, v]) => v === dayOfWeek)?.[0];
+    if (jsDayIndex === undefined) return null;
+
+    const targetDayNum = parseInt(jsDayIndex);
+    const currentDayNum = today.day();
+    const diff = targetDayNum - currentDayNum;
+    return today.add(diff, 'day');
 }
 
 /**
@@ -118,16 +142,8 @@ export function hasOrderForDayThisWeek(
     customerId: string,
     dayOfWeek: DayOfWeek
 ): boolean {
-    const today = dayjs();
-    // dayjs week starts on Sunday (0) by default
-    const jsDayIndex = Object.entries(JS_DAY_TO_DAY_OF_WEEK)
-        .find(([_, v]) => v === dayOfWeek)?.[0];
-    if (jsDayIndex === undefined) return false;
-
-    const targetDayNum = parseInt(jsDayIndex);
-    const currentDayNum = today.day();
-    const diff = targetDayNum - currentDayNum;
-    const targetDate = today.add(diff, 'day');
+    const targetDate = getDateForDayThisWeek(dayOfWeek);
+    if (!targetDate) return false;
 
     return orders.some(order => {
         if (order.customerId !== customerId) return false;
@@ -136,4 +152,18 @@ export function hasOrderForDayThisWeek(
         if (!orderDate) return false;
         return orderDate.isSame(targetDate, 'day');
     });
+}
+
+/**
+ * Determine if a schedule was manually dismissed for a specific day of the current week.
+ */
+export function isScheduleDismissedForDay(
+    schedule: B2BDeliverySchedule,
+    dayOfWeek: DayOfWeek
+): boolean {
+    if (!schedule.dismissedDates || schedule.dismissedDates.length === 0) return false;
+    const targetDate = getDateForDayThisWeek(dayOfWeek);
+    if (!targetDate) return false;
+    
+    return schedule.dismissedDates.includes(targetDate.format('YYYY-MM-DD'));
 }

@@ -1,15 +1,17 @@
-import { Button, Tooltip } from 'antd';
-import { WhatsAppOutlined, PhoneOutlined, CheckCircleFilled, ClockCircleFilled, EnvironmentOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Popconfirm } from 'antd';
+import { WhatsAppOutlined, PhoneOutlined, CheckCircleFilled, ClockCircleFilled, EnvironmentOutlined, StopOutlined } from '@ant-design/icons';
 import { B2BDeliverySchedule } from '../../../types';
 
 interface B2BBusinessCardProps {
     schedule: B2BDeliverySchedule;
     hasOrder: boolean;
     isPast: boolean;
+    isDismissed?: boolean;
     onClick: () => void;
+    onDismiss?: () => void;
 }
 
-export const B2BBusinessCard = ({ schedule, hasOrder, isPast, onClick }: B2BBusinessCardProps) => {
+export const B2BBusinessCard = ({ schedule, hasOrder, isPast, isDismissed, onClick, onDismiss }: B2BBusinessCardProps) => {
     const primaryContact = schedule.contacts?.find(c => c.isPrimary) || schedule.contacts?.[0];
 
     const handleWhatsApp = (e: React.MouseEvent) => {
@@ -30,6 +32,11 @@ export const B2BBusinessCard = ({ schedule, hasOrder, isPast, onClick }: B2BBusi
         bgColor = '#f6ffed';
         statusIcon = <CheckCircleFilled style={{ color: '#52c41a', fontSize: 14 }} />;
         statusText = 'Pedido creado';
+    } else if (isDismissed) {
+        borderColor = '#d9d9d9';
+        bgColor = '#f5f5f5';
+        statusIcon = <StopOutlined style={{ color: '#8c8c8c', fontSize: 14 }} />;
+        statusText = 'Omitido';
     } else if (isPast) {
         borderColor = '#d9d9d9';
         bgColor = '#fafafa';
@@ -65,9 +72,30 @@ export const B2BBusinessCard = ({ schedule, hasOrder, isPast, onClick }: B2BBusi
                 <span style={{ fontWeight: 600, fontSize: 14, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {schedule.customerName}
                 </span>
-                <Tooltip title={statusText}>
-                    {statusIcon}
-                </Tooltip>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {!hasOrder && !isDismissed && onDismiss && (
+                        <Popconfirm
+                            title="¿Omitir pedido?"
+                            description="Se quitará la alerta para esta semana"
+                            onConfirm={(e) => {
+                                e?.stopPropagation();
+                                onDismiss();
+                            }}
+                            onCancel={(e) => e?.stopPropagation()}
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<StopOutlined />}
+                                style={{ color: '#bfbfbf', padding: '0 4px' }}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </Popconfirm>
+                    )}
+                    <Tooltip title={statusText}>
+                        {statusIcon}
+                    </Tooltip>
+                </div>
             </div>
 
             {/* Preferred time */}

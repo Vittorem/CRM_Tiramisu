@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Button, Segmented, message, DatePicker, Modal, Skeleton } from 'antd';
-import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined } from '@ant-design/icons';
+import { Button, Segmented, message, DatePicker, Modal, Skeleton, Space } from 'antd';
+import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { Order, OrderStatus, Customer, SystemSettings, B2BDeliverySchedule } from '../../types';
 import { OrderForm } from './components/OrderForm';
@@ -14,6 +14,7 @@ import { calculateProductPoints, LOYALTY_RULES, getPointsCostForProduct, getLoya
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useLocation } from 'react-router-dom';
 import { getPendingB2BAlerts } from '../../utils/b2bAlerts';
+import { arrayUnion } from 'firebase/firestore';
 
 
 export const OrdersPage = () => {
@@ -24,6 +25,7 @@ export const OrdersPage = () => {
     const { add: addLoyalty } = useFirestoreMutation('loyalty_ledger');
     const { data: settings } = useFirestoreSubscription<SystemSettings>('settings');
     const { data: b2bSchedules } = useFirestoreSubscription<B2BDeliverySchedule>('b2b_schedules');
+    const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
 
     const isMobile = useIsMobile();
     const location = useLocation();
@@ -60,6 +62,18 @@ export const OrdersPage = () => {
         setEditingOrder(null);
         setPrefillCustomerId(customerId || null);
         setIsFormOpen(true);
+    };
+
+    const handleDismissB2BAlert = async (scheduleId: string, targetDateStr: string) => {
+        try {
+            await updateSchedule(scheduleId, {
+                dismissedDates: arrayUnion(targetDateStr) as unknown as string[]
+            });
+            message.success('Alerta de entrega omitida');
+        } catch (error) {
+            console.error('Error al omitir notificación', error);
+            message.error('Error al omitir la notificación');
+        }
     };
 
     const handleEdit = (order: Order) => {
@@ -261,14 +275,24 @@ export const OrdersPage = () => {
                                         {alert.urgency === 'today' ? `HOY ${alert.deliveryDay}` : `Mañana ${alert.deliveryDay}`}
                                     </span>
                                 </div>
-                                <Button
-                                    type="primary"
-                                    size="small"
-                                    onClick={() => handleCreate(alert.schedule.customerId)}
-                                    style={{ borderRadius: 6 }}
-                                >
-                                    Crear Pedido
-                                </Button>
+                                <Space size="small">
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<StopOutlined />}
+                                        onClick={() => handleDismissB2BAlert(alert.schedule.id, alert.targetDateStr)}
+                                    >
+                                        {!isMobile && 'Omitir'}
+                                    </Button>
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        onClick={() => handleCreate(alert.schedule.customerId)}
+                                        style={{ borderRadius: 6 }}
+                                    >
+                                        Crear Pedido
+                                    </Button>
+                                </Space>
                             </div>
                         ))}
                     </div>

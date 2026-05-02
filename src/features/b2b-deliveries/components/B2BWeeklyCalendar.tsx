@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
-import { Tag } from 'antd';
+import { message, Tag } from 'antd';
 import { B2BDeliverySchedule, DAYS_OF_WEEK, DayOfWeek, Order } from '../../../types';
 import { B2BBusinessCard } from './B2BBusinessCard';
-import { hasOrderForDayThisWeek, getTodayDayOfWeek } from '../../../utils/b2bAlerts';
+import { hasOrderForDayThisWeek, getTodayDayOfWeek, isScheduleDismissedForDay, getDateForDayThisWeek } from '../../../utils/b2bAlerts';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useFirestoreMutation } from '../../../hooks/useFirestore';
+import { arrayUnion } from 'firebase/firestore';
 
 interface B2BWeeklyCalendarProps {
     schedules: B2BDeliverySchedule[];
@@ -36,6 +38,21 @@ export const B2BWeeklyCalendar = ({ schedules, orders, onSelectSchedule }: B2BWe
     const isMobile = useIsMobile();
     const today = getTodayDayOfWeek();
     const todayJsNum = new Date().getDay();
+    const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
+
+    const handleDismiss = async (scheduleId: string, dayOfWeek: DayOfWeek) => {
+        const targetDate = getDateForDayThisWeek(dayOfWeek);
+        if (!targetDate) return;
+        try {
+            await updateSchedule(scheduleId, {
+                dismissedDates: arrayUnion(targetDate.format('YYYY-MM-DD')) as unknown as string[]
+            });
+            message.success('Pedido omitido para esta semana');
+        } catch (error) {
+            console.error('Error al omitir', error);
+            message.error('Error al omitir el pedido');
+        }
+    };
 
     // Group schedules by day
     const schedulesByDay = useMemo(() => {
@@ -130,7 +147,9 @@ export const B2BWeeklyCalendar = ({ schedules, orders, onSelectSchedule }: B2BWe
                                         schedule={schedule}
                                         hasOrder={hasOrderForDayThisWeek(orders, schedule.customerId, day)}
                                         isPast={isPast}
+                                        isDismissed={isScheduleDismissedForDay(schedule, day)}
                                         onClick={() => onSelectSchedule(schedule)}
+                                        onDismiss={() => handleDismiss(schedule.id, day)}
                                     />
                                 ))
                             )}
