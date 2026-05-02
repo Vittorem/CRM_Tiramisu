@@ -274,10 +274,24 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             onClose={onClose}
             open={open}
             extra={
-                <Space>
-                    <Button onClick={onClose}>Cancelar</Button>
-                    <Button type="primary" onClick={handleFinish} loading={loading} disabled={!!loyaltyError}>Guardar</Button>
-                </Space>
+                !isMobile && (
+                    <Space>
+                        <Button onClick={onClose}>Cancelar</Button>
+                        <Button type="primary" onClick={handleFinish} loading={loading} disabled={!!loyaltyError}>Guardar</Button>
+                    </Space>
+                )
+            }
+            footer={
+                isMobile && (
+                    <div style={{ display: 'flex', gap: '8px', padding: '8px' }}>
+                        <Button onClick={onClose} style={{ flex: 1 }} size="large">
+                            Cancelar
+                        </Button>
+                        <Button type="primary" onClick={handleFinish} loading={loading} disabled={!!loyaltyError} style={{ flex: 1 }} size="large">
+                            Guardar
+                        </Button>
+                    </div>
+                )
             }
         >
             <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false}>
@@ -417,7 +431,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 <Divider orientation="left">Entrega & Cobro</Divider>
 
                 <Row gutter={16}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
                         <Form.Item label="Fecha y Hora Entrega" required style={{ marginBottom: 0 }}>
                             <Space wrap>
                                 <Form.Item name="deliveryDate" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
@@ -445,7 +459,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 </Row>
 
                 <Row gutter={16}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
                         <Form.Item name="discountType" label="Tipo Descuento">
                             <Select>
                                 <Option value="AMOUNT">Monto ($)</Option>
@@ -472,7 +486,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                             <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
                         </Form.Item>
                     </Col>
-                    <Col xs={24} md={16}>
+                    <Col xs={24} md={16} style={{ display: isMobile ? 'none' : 'block' }}>
                         <Form.Item name="extraChargesReason" label="Motivo Cargo Extra">
                             <Input placeholder="Ej. Empaque especial" />
                         </Form.Item>

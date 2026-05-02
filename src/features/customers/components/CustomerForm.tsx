@@ -128,27 +128,31 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                         <Input placeholder="Ej. Abogada" />
                     </Form.Item>
                 </Col>
-                <Col span={12}>
-                    <Form.Item name="email" label="Email (Opcional)">
-                        <Input type="email" />
-                    </Form.Item>
-                </Col>
+                {!isMobile && (
+                    <Col span={12}>
+                        <Form.Item name="email" label="Email (Opcional)">
+                            <Input type="email" />
+                        </Form.Item>
+                    </Col>
+                )}
             </Row>
 
             <Divider plain>Redes & Ubicación</Divider>
 
-            <Row gutter={16}>
-                <Col span={12}>
-                    <Form.Item name="instagramHandle" label="Instagram User">
-                        <Input prefix="@" />
-                    </Form.Item>
-                </Col>
-                <Col span={12}>
-                    <Form.Item name="facebookLink" label="Facebook Link">
-                        <Input />
-                    </Form.Item>
-                </Col>
-            </Row>
+            {!isMobile && (
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item name="instagramHandle" label="Instagram User">
+                            <Input prefix="@" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item name="facebookLink" label="Facebook Link">
+                            <Input />
+                        </Form.Item>
+                    </Col>
+                </Row>
+            )}
             <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item name="colonia" label="Colonia">
@@ -162,22 +166,26 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                 </Col>
             </Row>
 
-            <Divider plain>Notas y Etiquetas</Divider>
+            {!isMobile && (
+                <>
+                    <Divider plain>Notas y Etiquetas</Divider>
 
-            <Row gutter={16}>
-                <Col span={24}>
-                    <Form.Item name="tags" label="Etiquetas">
-                        <Select mode="tags" style={{ width: '100%' }} placeholder="Ej. VIP, Alérgico a nuez" />
-                    </Form.Item>
-                </Col>
-            </Row>
-            <Row gutter={16}>
-                <Col span={24}>
-                    <Form.Item name="notes" label="Notas Internas">
-                        <TextArea rows={4} />
-                    </Form.Item>
-                </Col>
-            </Row>
+                    <Row gutter={16}>
+                        <Col span={24}>
+                            <Form.Item name="tags" label="Etiquetas">
+                                <Select mode="tags" style={{ width: '100%' }} placeholder="Ej. VIP, Alérgico a nuez" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={16}>
+                        <Col span={24}>
+                            <Form.Item name="notes" label="Notas Internas">
+                                <TextArea rows={4} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                </>
+            )}
         </Form>
     );
 
@@ -191,12 +199,26 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
             open={open}
             styles={{ body: { paddingBottom: 80 } }}
             extra={
-                <Space>
-                    <Button onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSubmit} type="primary" loading={loading}>
-                        Guardar
-                    </Button>
-                </Space>
+                !isMobile && (
+                    <Space>
+                        <Button onClick={onClose}>Cancelar</Button>
+                        <Button onClick={handleSubmit} type="primary" loading={loading}>
+                            Guardar
+                        </Button>
+                    </Space>
+                )
+            }
+            footer={
+                isMobile && (
+                    <div style={{ display: 'flex', gap: '8px', padding: '8px' }}>
+                        <Button onClick={onClose} style={{ flex: 1 }} size="large">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleSubmit} type="primary" loading={loading} style={{ flex: 1 }} size="large">
+                            Guardar
+                        </Button>
+                    </div>
+                )
             }
         >
             {initialValues ? (
