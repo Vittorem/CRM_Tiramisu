@@ -16,15 +16,6 @@ interface OrderListProps {
     onStatusChange?: (id: string, newStatus: OrderStatus) => void;
 }
 
-// Status color map (reusable)
-const STATUS_COLOR: Record<string, string> = {
-    'Pendiente': 'orange',
-    'Confirmado': 'geekblue',
-    'En preparación': 'purple',
-    'Listo para entregar': 'cyan',
-    'Entregado': 'green',
-    'Cancelado': 'red',
-};
 
 // Status labels for the mobile filter chips
 const MOBILE_FILTER_STATUSES: OrderStatus[] = [
