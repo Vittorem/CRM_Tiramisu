@@ -77,7 +77,7 @@ function KanbanColumn({ status, orders, onEdit }: { status: OrderStatus; orders:
     const { token: { colorBgLayout } } = theme.useToken();
 
     return (
-        <div ref={setNodeRef} style={{ flex: 1, background: colorBgLayout, padding: '8px 4px', borderRadius: 8, minWidth: 190, display: 'flex', flexDirection: 'column' }}>
+        <div ref={setNodeRef} style={{ flex: 1, background: colorBgLayout, padding: '8px 4px', borderRadius: 8, minWidth: 130, display: 'flex', flexDirection: 'column' }}>
             <Typography.Title level={5} style={{ margin: '0 0 12px 0', textAlign: 'center', fontSize: 13 }}>
                 {status} ({orders.length})
             </Typography.Title>
