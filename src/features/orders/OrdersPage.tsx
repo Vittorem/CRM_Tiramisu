@@ -203,8 +203,8 @@ export const OrdersPage = () => {
 
 
     return (
-        <div style={{ height: '100%' }}>
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', marginBottom: 16, gap: 16 }}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', marginBottom: 16, gap: 16, flexShrink: 0 }}>
                 <div style={{ display: 'flex', gap: 16, width: isMobile ? '100%' : 'auto' }}>
                     {!isMobile && (
                         <Segmented<string>
@@ -307,9 +307,10 @@ export const OrdersPage = () => {
 
 
 
-            {loadingOrders || loadingCustomers ? (
-                <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 8 }} /></div>
-            ) : viewMode === 'Kanban' && !isMobile ? (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                {loadingOrders || loadingCustomers ? (
+                    <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 8 }} /></div>
+                ) : viewMode === 'Kanban' && !isMobile ? (
                 <OrderKanbanBoard
                     orders={filteredOrders}
                     onStatusChange={handleStatusChange}
@@ -323,6 +324,7 @@ export const OrdersPage = () => {
                     onStatusChange={handleStatusChange}
                 />
             )}
+            </div>
 
             <OrderForm
                 open={isFormOpen}
