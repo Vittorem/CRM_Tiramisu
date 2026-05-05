@@ -46,9 +46,14 @@ function hasMatchingOrder(
     return orders.some(order => {
         if (order.customerId !== customerId) return false;
         if (order.status === 'Cancelado') return false;
+        
         const orderDate = getOrderDate(order);
         if (!orderDate) return false;
-        return orderDate.isSame(targetDate, 'day');
+        
+        // Ventana de ±2 días: si se crea el pedido un día antes (cuando sale la alerta) 
+        // o un día después, se considera que corresponde a esta entrega.
+        const diffDays = Math.abs(orderDate.startOf('day').diff(targetDate.startOf('day'), 'day'));
+        return diffDays <= 2;
     });
 }
 
@@ -148,9 +153,12 @@ export function hasOrderForDayThisWeek(
     return orders.some(order => {
         if (order.customerId !== customerId) return false;
         if (order.status === 'Cancelado') return false;
+        
         const orderDate = getOrderDate(order);
         if (!orderDate) return false;
-        return orderDate.isSame(targetDate, 'day');
+        
+        const diffDays = Math.abs(orderDate.startOf('day').diff(targetDate.startOf('day'), 'day'));
+        return diffDays <= 2;
     });
 }
 
