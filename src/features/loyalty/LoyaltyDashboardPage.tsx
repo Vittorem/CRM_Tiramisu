@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Row, Col, Card, Statistic, Table, Tag, Button, Input, message, Switch, Alert, List as AntList } from 'antd';
-import { TrophyOutlined, GiftOutlined, WhatsAppOutlined, SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Tag, Button, Input, message, Switch, Alert, List as AntList, Segmented } from 'antd';
+import { TrophyOutlined, GiftOutlined, WhatsAppOutlined, SearchOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
-import { Customer, LoyaltyLedger, SystemSettings } from '../../types';
+import { Customer, LoyaltyLedger, SystemSettings, Order } from '../../types';
 import { CustomerForm } from '../customers/components/CustomerForm';
 import { LOYALTY_RULES, getLoyaltyRewardSummary } from '../../utils/loyalty';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { CustomerBehaviorBoard } from './CustomerBehaviorBoard';
 
 export const LoyaltyDashboardPage = () => {
     const { data: customers, loading: loadingCustomers } = useFirestoreSubscription<Customer>('customers');
+    const { data: orders } = useFirestoreSubscription<Order>('orders');
     const { data: ledger } = useFirestoreSubscription<LoyaltyLedger>('loyalty_ledger');
     const { add, update } = useFirestoreMutation('customers');
 
@@ -24,6 +26,7 @@ export const LoyaltyDashboardPage = () => {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
     const isMobile = useIsMobile();
+    const [activeView, setActiveView] = useState<'Puntos' | 'Comportamiento'>('Puntos');
 
     const handleAddCustomer = () => {
         setEditingCustomer(null);
@@ -151,6 +154,24 @@ export const LoyaltyDashboardPage = () => {
 
     return (
         <div style={{ padding: isMobile ? '0' : '0 24px', maxWidth: 1200, margin: '0 auto' }}>
+            {/* View Switcher */}
+            <div style={{ marginBottom: 20 }}>
+                <Segmented<string>
+                    options={[
+                        { label: isMobile ? '⭐ Puntos' : '⭐ Programa de Puntos', value: 'Puntos', icon: <TrophyOutlined /> },
+                        { label: isMobile ? '📊 Análisis' : '📊 Análisis de Comportamiento', value: 'Comportamiento', icon: <TeamOutlined /> },
+                    ]}
+                    value={activeView}
+                    onChange={v => setActiveView(v as 'Puntos' | 'Comportamiento')}
+                    block={isMobile}
+                    style={{ fontWeight: 600 }}
+                />
+            </div>
+
+            {activeView === 'Comportamiento' ? (
+                <CustomerBehaviorBoard customers={customers} orders={orders} />
+            ) : (
+            <>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, gap: 16 }}>
                 <div>
                     <h2 style={{ fontSize: isMobile ? '20px' : '24px', marginBottom: 8 }}>Programa de Lealtad (Dashboard)</h2>
@@ -263,6 +284,8 @@ export const LoyaltyDashboardPage = () => {
                     />
                 )}
             </Card>
+            </>
+            )}
 
             <CustomerForm
                 open={isDrawerOpen}
