@@ -18,6 +18,7 @@ import {
     PlusOutlined,
     BookOutlined,
     SendOutlined,
+    CompassOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthGate';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -41,8 +42,9 @@ export const AppLayout = () => {
         token: { colorBgContainer, borderRadiusLG, colorBorderSecondary, colorPrimary },
     } = theme.useToken();
 
-    const menuItems = [
+    const allMenuItems = [
         { key: '/', icon: <AppstoreOutlined />, label: 'Dashboard' },
+        { key: '/roadmap', icon: <CompassOutlined />, label: 'Roadmap' },
         { key: '/customers', icon: <UserOutlined />, label: 'Clientes' },
         { key: '/orders', icon: <ShoppingOutlined />, label: 'Pedidos' },
         { key: '/b2b-deliveries', icon: <SendOutlined />, label: 'Entregas B2B' },
@@ -53,11 +55,13 @@ export const AppLayout = () => {
         { key: '/settings', icon: <SettingOutlined />, label: 'Configuración' },
     ];
 
+    const menuItems = allMenuItems.filter(item => isMobile ? item.key !== '/roadmap' : true);
+
     const mobileTabItems = [
-        menuItems[0], // Dashboard
-        menuItems[2], // Pedidos
-        menuItems[1], // Clientes
-    ];
+        menuItems.find(i => i.key === '/'), // Dashboard
+        menuItems.find(i => i.key === '/orders'), // Pedidos
+        menuItems.find(i => i.key === '/customers'), // Clientes
+    ].filter(Boolean) as any[];
 
     const userMenu = {
         items: [

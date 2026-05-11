@@ -16,6 +16,7 @@ import { InventoryPage } from './features/inventory/InventoryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { RecetarioPage } from './features/recetario/RecetarioPage';
 import { B2BDeliveriesPage } from './features/b2b-deliveries/B2BDeliveriesPage';
+import { RoadmapPage } from './features/roadmap/RoadmapPage';
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ function App() {
                                         <Route path="reports" element={<ReportsPage />} />
                                         <Route path="inventory" element={<InventoryPage />} />
                                         <Route path="recetario" element={<RecetarioPage />} />
+                                        <Route path="roadmap" element={<RoadmapPage />} />
                                         <Route path="settings" element={<SettingsPage />} />
                                         <Route path="*" element={<Navigate to="/" replace />} />
                                     </Route>
