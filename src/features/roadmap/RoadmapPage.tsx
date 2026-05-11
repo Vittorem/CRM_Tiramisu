@@ -30,6 +30,7 @@ interface LayoutNode {
     x: number;
     y: number;
     subtreeW: number;
+    subtreeH: number;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -38,11 +39,12 @@ const PRIORITIES = ['Baja', 'Media', 'Alta', 'Urgente'];
 const IMMEDIACIES = ['Corto plazo', 'Mediano plazo', 'Largo plazo'];
 const STATUSES = ['Pendiente', 'En progreso', 'Completado'];
 
-const NODE_W = 220;
-const NODE_H = 72;
-const H_GAP = 36;
-const V_GAP = 56;
-const PAD = 48;
+const NODE_W = 210;
+const NODE_H = 68;
+const H_GAP = 28;
+const V_GAP = 48;
+const PAD = 40;
+const MAX_COLS = 4; // max children per row before wrapping
 
 const PRIORITY_COLORS: Record<string, string> = { Baja: '#52c41a', Media: '#1677ff', Alta: '#fa8c16', Urgente: '#ff4d4f' };
 const STATUS_META: Record<string, { color: string; label: string }> = {
@@ -51,11 +53,17 @@ const STATUS_META: Record<string, { color: string; label: string }> = {
     Completado: { color: '#52c41a', label: '✓' },
 };
 
-// ─── Tree layout algorithm ───────────────────────────────────────────────────
+// ─── Tree layout algorithm (grid-wrapping) ───────────────────────────────────
+
+function chunk<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+}
 
 function buildTree(items: RoadmapStep[]): LayoutNode[] {
     const map = new Map<string, LayoutNode>();
-    items.forEach(it => map.set(it.id, { item: it, children: [], x: 0, y: 0, subtreeW: 0 }));
+    items.forEach(it => map.set(it.id, { item: it, children: [], x: 0, y: 0, subtreeW: 0, subtreeH: 0 }));
 
     const roots: LayoutNode[] = [];
     map.forEach(node => {
@@ -76,24 +84,62 @@ function buildTree(items: RoadmapStep[]): LayoutNode[] {
     return roots;
 }
 
-function calcWidth(node: LayoutNode): number {
-    if (node.children.length === 0) { node.subtreeW = NODE_W; return NODE_W; }
-    let total = 0;
-    node.children.forEach(c => { total += calcWidth(c); });
-    total += (node.children.length - 1) * H_GAP;
-    node.subtreeW = Math.max(NODE_W, total);
-    return node.subtreeW;
+/** Calculate subtree width & height bottom-up, wrapping children into rows of MAX_COLS */
+function calcDims(node: LayoutNode): void {
+    if (node.children.length === 0) {
+        node.subtreeW = NODE_W;
+        node.subtreeH = NODE_H;
+        return;
+    }
+
+    node.children.forEach(c => calcDims(c));
+
+    const rows = chunk(node.children, MAX_COLS);
+
+    // Width = widest row
+    let maxRowW = 0;
+    rows.forEach(row => {
+        const rowW = row.reduce((s, c) => s + c.subtreeW, 0) + (row.length - 1) * H_GAP;
+        maxRowW = Math.max(maxRowW, rowW);
+    });
+
+    // Height = this node + gap + sum of row heights (each row = tallest child in that row)
+    let childrenH = 0;
+    rows.forEach((row, i) => {
+        childrenH += Math.max(...row.map(c => c.subtreeH));
+        if (i < rows.length - 1) childrenH += V_GAP;
+    });
+
+    node.subtreeW = Math.max(NODE_W, maxRowW);
+    node.subtreeH = NODE_H + V_GAP + childrenH;
 }
 
+/** Assign x,y positions top-down, placing children in wrapped rows */
 function assignPos(node: LayoutNode, x: number, y: number) {
     node.x = x + node.subtreeW / 2 - NODE_W / 2;
     node.y = y;
-    let cx = x;
-    node.children.forEach(c => { assignPos(c, cx, y + NODE_H + V_GAP); cx += c.subtreeW + H_GAP; });
+
+    if (node.children.length === 0) return;
+
+    const rows = chunk(node.children, MAX_COLS);
+    let curY = y + NODE_H + V_GAP;
+
+    rows.forEach(row => {
+        const rowW = row.reduce((s, c) => s + c.subtreeW, 0) + (row.length - 1) * H_GAP;
+        let cx = x + (node.subtreeW - rowW) / 2; // center row under parent
+
+        let rowH = 0;
+        row.forEach(c => {
+            assignPos(c, cx, curY);
+            cx += c.subtreeW + H_GAP;
+            rowH = Math.max(rowH, c.subtreeH);
+        });
+        curY += rowH + V_GAP;
+    });
 }
 
 function layoutForest(roots: LayoutNode[]): { nodes: LayoutNode[]; w: number; h: number } {
-    roots.forEach(r => calcWidth(r));
+    roots.forEach(r => calcDims(r));
     let sx = PAD;
     roots.forEach(r => { assignPos(r, sx, PAD); sx += r.subtreeW + H_GAP * 2; });
 
