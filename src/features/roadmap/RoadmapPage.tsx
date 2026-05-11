@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Typography, Button, Drawer, Form, Input, Select, Tag, Space, message, Empty, Col, Row, Popconfirm, Modal, Tooltip, Switch, theme } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CompassOutlined, SubnodeOutlined, FireOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CompassOutlined, SubnodeOutlined, FireOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { BaseEntity } from '../../types';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -173,11 +173,12 @@ function getEdges(roots: LayoutNode[]): { x1: number; y1: number; x2: number; y2
 
 // ─── Concept Map Component ───────────────────────────────────────────────────
 
-function ConceptMap({ items, onEdit, onDelete, onAddChild, isDark }: {
+function ConceptMap({ items, onEdit, onDelete, onAddChild, onUnlink, isDark }: {
     items: RoadmapStep[];
     onEdit: (item: RoadmapStep) => void;
     onDelete: (id: string) => void;
     onAddChild: (parentId: string) => void;
+    onUnlink: (id: string) => void;
     isDark: boolean;
 }) {
     const roots = useMemo(() => buildTree(items), [items]);
@@ -260,6 +261,11 @@ function ConceptMap({ items, onEdit, onDelete, onAddChild, isDark }: {
                                     <Tag style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>{n.item.immediacy}</Tag>
                                 </div>
                                 <div style={{ display: 'flex', gap: 2 }} onClick={e => e.stopPropagation()}>
+                                    {(n.item.parentId || n.item.dependsOnId) && (
+                                        <Tooltip title="Desvincular del padre">
+                                            <Button type="text" size="small" icon={<DisconnectOutlined />} style={{ fontSize: 12, width: 22, height: 22, color: '#faad14' }} onClick={() => onUnlink(n.item.id)} />
+                                        </Tooltip>
+                                    )}
                                     <Tooltip title="Agregar sub-paso">
                                         <Button type="text" size="small" icon={<SubnodeOutlined />} style={{ fontSize: 12, width: 22, height: 22 }} onClick={() => onAddChild(n.item.id)} />
                                     </Tooltip>
@@ -374,7 +380,7 @@ export const RoadmapPage = () => {
     const handleSaveStep = async () => {
         try {
             const values = await form.validateFields();
-            if (!values.parentId) delete values.parentId;
+            if (!values.parentId) values.parentId = '';
             
             // Clean up dependsOnId to use parentId for consistency moving forward
             if (values.dependsOnId) {
@@ -401,6 +407,11 @@ export const RoadmapPage = () => {
         await Promise.all(children.map(c => updateStep(c.id, { parentId: '' } as any)));
         await deleteStep(id);
         message.success('Paso eliminado');
+    };
+
+    const handleUnlinkStep = async (id: string) => {
+        await updateStep(id, { parentId: '', dependsOnId: '' } as any);
+        message.success('Paso desvinculado');
     };
 
     // ─── Render ──────────────────────────────────────────────────────
@@ -478,6 +489,7 @@ export const RoadmapPage = () => {
                                 onEdit={handleEditStep}
                                 onDelete={handleDeleteStep}
                                 onAddChild={(pid) => openStepDrawer(pid)}
+                                onUnlink={handleUnlinkStep}
                                 isDark={isDarkMode}
                             />
                         )
