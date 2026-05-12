@@ -23,9 +23,6 @@ const fmt = (n: number) =>
 
 const fmtDate = (d: dayjs.Dayjs | null) => (d ? d.format('DD MMM YYYY') : '—');
 
-const monthLabel = (d: dayjs.Dayjs) =>
-    d.format('MMM YYYY').replace(/^./, s => s.toUpperCase());
-
 // ─── Component ───────────────────────────────────────────────────────
 
 export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {

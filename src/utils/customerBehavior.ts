@@ -95,7 +95,6 @@ export function classifyCustomers(
     });
 
     const classified: ClassifiedCustomer[] = [];
-    const currentMonth = now.startOf('month');
 
     for (const customer of customers) {
         if (customer.isDeleted) continue;
@@ -124,7 +123,7 @@ export function classifyCustomers(
         // Calculate months since first order to NOW
         // If first order was in May and now is May, it's 1 month.
         // diff + 1 to include both ends
-        const monthsElapsed = Math.max(1, now.diff(firstDate.startOf('month'), 'month') + 1);
+        const monthsElapsed = Math.max(1, now.diff((firstDate as dayjs.Dayjs).startOf('month'), 'month') + 1);
         
         const totalOrders = custOrders.length;
         const avgOrdersPerMonth = totalOrders / monthsElapsed;
