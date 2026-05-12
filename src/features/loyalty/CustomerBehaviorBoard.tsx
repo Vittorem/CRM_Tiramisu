@@ -16,7 +16,6 @@ import {
     ClassifiedCustomer,
     B2C_CATEGORIES,
     B2B_CATEGORIES,
-    CategoryMeta,
 } from '../../utils/customerBehavior';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import dayjs from 'dayjs';
