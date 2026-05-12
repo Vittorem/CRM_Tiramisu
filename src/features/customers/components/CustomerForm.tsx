@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Drawer, Form, Input, Select, Button, InputNumber, Row, Col, Space, Divider, Switch, Tabs, Timeline, Card, Tag } from 'antd';
 import { Customer, Order } from '../../../types';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
+import { getCustomerBehaviorCategory, B2C_CATEGORIES, B2B_CATEGORIES } from '../../../utils/customerBehavior';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
@@ -21,6 +22,11 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
     const isMobile = useIsMobile();
 
     const { data: orders } = useFirestoreSubscription<Order>('orders');
+
+    const behaviorCategory = initialValues ? getCustomerBehaviorCategory(initialValues, orders) : null;
+    const catMeta = behaviorCategory ? 
+        (initialValues?.type === 'B2B' ? B2B_CATEGORIES : B2C_CATEGORIES).find(c => c.key === behaviorCategory.category) 
+        : null;
 
     // Sort logic
     const customerOrders = initialValues
@@ -191,7 +197,16 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
 
     return (
         <Drawer
-            title={initialValues ? 'Perfil de Cliente' : 'Nuevo Cliente'}
+            title={
+                <Space>
+                    {initialValues ? 'Perfil de Cliente' : 'Nuevo Cliente'}
+                    {catMeta && (
+                        <Tag color={catMeta.color} style={{ margin: 0 }}>
+                            {catMeta.emoji} {catMeta.key}
+                        </Tag>
+                    )}
+                </Space>
+            }
             width={isMobile ? '100%' : 720}
             placement={isMobile ? 'bottom' : 'right'}
             height={isMobile ? '90vh' : '100%'}

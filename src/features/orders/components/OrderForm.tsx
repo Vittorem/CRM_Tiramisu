@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Alert, Checkbox, Grid, TimePicker } from 'antd';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Alert, Checkbox, Grid, TimePicker, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, SystemSettings, PAYMENT_STATUSES } from '../../../types';
 import { getPointsCostForProduct } from '../../../utils/loyalty';
+import { getCustomerBehaviorCategory, B2C_CATEGORIES, B2B_CATEGORIES } from '../../../utils/customerBehavior';
 import dayjs from 'dayjs';
 
 interface OrderFormProps {
@@ -44,6 +45,11 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
     const currentCustomer = customers.find(c => c.id === form.getFieldValue('customerId'));
     const availablePointsRaw = currentCustomer?.loyaltyPoints || 0;
+
+    const behaviorCategory = currentCustomer ? getCustomerBehaviorCategory(currentCustomer, orders) : null;
+    const catMeta = behaviorCategory ? 
+        (currentCustomer?.type === 'B2B' ? B2B_CATEGORIES : B2C_CATEGORIES).find(c => c.key === behaviorCategory.category) 
+        : null;
 
     // Calculate frozen points from other pending orders
     const orderId = initialValues?.id || null;
@@ -294,7 +300,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 )
             }
         >
-            <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false}>
+            <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false} initialValues={{ appliedPromotion: '' }}>
                 <Row gutter={16}>
                     <Col xs={24} md={12}>
                         <Form.Item name="customerId" label="Cliente" rules={[{ required: true }]}>
@@ -315,6 +321,57 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                         </Form.Item>
                     </Col>
                 </Row>
+
+                {currentCustomer && catMeta && currentCustomer.type === 'B2C' && (() => {
+                    let options: {label: string, value: string}[] = [];
+                    switch (behaviorCategory?.category) {
+                        case 'Super Leal':
+                            options = [
+                                { label: 'Aplicar promo 6 tiramisús por $300', value: 'Aplicar promo 6 tiramisús por $300' },
+                                { label: 'Aplicar promo 12 tiramisús por $600 con cajita kraft', value: 'Aplicar promo 12 tiramisús por $600 con cajita kraft' },
+                                { label: 'Aplicar precio especial Tiramisu Grande $600', value: 'Aplicar precio especial Tiramisu Grande $600' }
+                            ];
+                            break;
+                        case 'Leal':
+                            options = [
+                                { label: 'Aplicar promo 12 tiramisús por $600', value: 'Aplicar promo 12 tiramisús por $600' },
+                                { label: 'Aplicar precio especial Tiramisu Grande $625', value: 'Aplicar precio especial Tiramisu Grande $625' }
+                            ];
+                            break;
+                        case 'Ocasional':
+                            options = [
+                                { label: 'Aplicar promo 4 tiramisús por $220', value: 'Aplicar promo 4 tiramisús por $220' }
+                            ];
+                            break;
+                        case 'Esporádico':
+                            options = [
+                                { label: 'Aplicar cupón 10% de descuento', value: 'Aplicar cupón 10% de descuento' }
+                            ];
+                            break;
+                        case 'Único':
+                            options = [
+                                { label: 'Aplicar cupón 10% de descuento en segunda compra', value: 'Aplicar cupón 10% de descuento en segunda compra' }
+                            ];
+                            break;
+                    }
+
+                    if (options.length === 0) return null;
+
+                    return (
+                        <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                                <Tag color={catMeta.color} style={{ margin: 0 }}>{catMeta.emoji} {catMeta.key}</Tag>
+                                <strong>Beneficios Exclusivos Disponibles</strong>
+                            </div>
+                            <Form.Item name="appliedPromotion" style={{ marginBottom: 0 }}>
+                                <Radio.Group style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <Radio value="">Ninguno</Radio>
+                                    {options.map(o => <Radio key={o.value} value={o.value}>{o.label}</Radio>)}
+                                </Radio.Group>
+                            </Form.Item>
+                        </div>
+                    );
+                })()}
 
                 {isLoyaltyEnabled && currentCustomer && availablePointsRaw > 0 && (
                     <div style={{ marginBottom: 16 }}>

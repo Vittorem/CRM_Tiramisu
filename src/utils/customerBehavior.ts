@@ -25,7 +25,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'gold',
         gradient: 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
         description: '≥5 compras y compras en ≥3 meses distintos (4 meses)',
-        defaultMessage: '¡Hola {{nombre}}! 👑 Eres de nuestros clientes más SUPER LEALES. Como agradecimiento, tienes envío gratis en tu próximo pedido y acceso anticipado a nuestras promociones. ¡Gracias por preferirnos!',
+        defaultMessage: '¡Hola {{nombre}}! 👑 Tienes beneficios exclusivos por ser un cliente SUPER LEAL. Aprovecha: 6 tiramisús por $300, 12 tiramisús por $600 con cajita kraft de regalo, o un Tiramisu Grande a precio preferencial de $600. ¡Gracias por tu preferencia!',
     },
     {
         key: 'Leal',
@@ -33,7 +33,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'blue',
         gradient: 'linear-gradient(135deg, #1890ff 0%, #69c0ff 100%)',
         description: '3-4 compras y compras en ≥2 meses distintos (4 meses)',
-        defaultMessage: '¡Hola {{nombre}}! ⭐ Gracias por ser un cliente LEAL. Disfruta de un postre de regalo en tu próxima compra mayor a $300. ¡Te esperamos!',
+        defaultMessage: '¡Hola {{nombre}}! ⭐ Tienes beneficios por ser cliente LEAL. Disfruta de nuestras promociones: 12 tiramisús por $600 o un Tiramisu Grande a precio especial de $625. ¡Te esperamos!',
     },
     {
         key: 'Ocasional',
@@ -41,7 +41,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'green',
         gradient: 'linear-gradient(135deg, #52c41a 0%, #95de64 100%)',
         description: '2 compras total y última compra ≤ 60 días',
-        defaultMessage: '¡Hola {{nombre}}! 🔁 Nos encanta verte por aquí. En tu próximo pedido te incluimos un detalle sorpresa para que sigas disfrutando. ¡Haz tu pedido hoy!',
+        defaultMessage: '¡Hola {{nombre}}! 🔁 Tenemos una promoción especial para que vuelvas a comprar: llévate 4 tiramisús por solo $220. ¡Haz tu pedido hoy!',
     },
     {
         key: 'Esporádico',
@@ -49,7 +49,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'orange',
         gradient: 'linear-gradient(135deg, #fa8c16 0%, #ffc069 100%)',
         description: '2 compras total, pero sin compra en últimos 60 días',
-        defaultMessage: '¡Hola {{nombre}}! 💤 Ha pasado un tiempo desde tu última compra. Queremos verte de nuevo, ¡te regalamos un 10% de descuento en tu próximo pedido!',
+        defaultMessage: '¡Hola {{nombre}}! 💤 Te extrañamos. Te invitamos a regresar con un beneficio especial: un cupón del 10% de descuento en tu próxima compra.',
     },
     {
         key: 'Único',
@@ -57,7 +57,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'default',
         gradient: 'linear-gradient(135deg, #8c8c8c 0%, #bfbfbf 100%)',
         description: '1 sola compra en el periodo de 4 meses',
-        defaultMessage: '¡Hola {{nombre}}! 1️⃣ Gracias por habernos probado. Nos encantaría que vuelvas a disfrutar nuestros productos. ¡Aprovecha nuestra promoción de temporada!',
+        defaultMessage: '¡Hola {{nombre}}! 1️⃣ Nos encantaría volver a atenderte. Por eso, te regalamos un cupón del 10% de descuento en tu segunda compra. ¡Aprovecha!',
     },
 ];
 
@@ -215,4 +215,11 @@ export function classifyCustomers(
     b2b.sort((a, b) => b.totalSpent - a.totalSpent);
 
     return { b2c, b2b };
+}
+
+export function getCustomerBehaviorCategory(customer: Customer, orders: Order[]): ClassifiedCustomer | null {
+    if (!customer) return null;
+    const { b2c, b2b } = classifyCustomers([customer], orders);
+    if (customer.type === 'B2B') return b2b[0] || null;
+    return b2c[0] || null;
 }

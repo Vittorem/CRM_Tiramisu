@@ -139,6 +139,8 @@ export interface Order extends BaseEntity {
     pointsRedeemed?: number;
     pointsAwarded?: boolean;
 
+    appliedPromotion?: string;
+
     // Calculated fields
     subtotal: number;
     discountAmount: number;
