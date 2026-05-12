@@ -34,12 +34,10 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
     const [activeTab, setActiveTab] = useState<BehaviorCategory>('Super Leal');
 
     // Classification
-    const { classified, period } = useMemo(
+    const { classified, periodLabel } = useMemo(
         () => classifyCustomers(customers, orders),
         [customers, orders],
     );
-
-    const periodLabel = `${monthLabel(period.start)} – ${monthLabel(period.end.subtract(1, 'day'))}`;
 
     // Group by category
     const grouped = useMemo(() => {
@@ -307,7 +305,7 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                 <CalendarOutlined />
                 Periodo de análisis: <strong style={{ color: '#595959' }}>{periodLabel}</strong>
                 <span style={{ marginLeft: 4 }}>
-                    — <strong>{totalClassified}</strong> clientes con compras
+                    — <strong>{totalClassified}</strong> clientes analizados
                 </span>
             </div>
 

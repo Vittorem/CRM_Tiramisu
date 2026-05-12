@@ -25,35 +25,35 @@ export const BEHAVIOR_CATEGORIES: CategoryMeta[] = [
         emoji: '👑',
         color: 'gold',
         gradient: 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
-        description: '≥3 compras/mes ó ≥$900 gasto mensual',
+        description: '≥3 compras/mes ó ≥$650 gasto mensual',
     },
     {
         key: 'Leal',
         emoji: '⭐',
         color: 'blue',
         gradient: 'linear-gradient(135deg, #1890ff 0%, #69c0ff 100%)',
-        description: '≥2 compras/mes ó ≥$650 gasto mensual',
+        description: '≥2 compras/mes ó ≥$400 gasto mensual',
     },
     {
         key: 'Ocasional',
         emoji: '🔄',
         color: 'green',
         gradient: 'linear-gradient(135deg, #52c41a 0%, #95de64 100%)',
-        description: 'Compra todos los meses',
+        description: 'Compra todos los meses desde inicio',
     },
     {
         key: 'Esporádico',
         emoji: '💤',
         color: 'orange',
         gradient: 'linear-gradient(135deg, #fa8c16 0%, #ffc069 100%)',
-        description: 'Al menos 2 compras en 4 meses',
+        description: 'Al menos 2 compras en total',
     },
     {
         key: 'Único',
         emoji: '1️⃣',
         color: 'default',
         gradient: 'linear-gradient(135deg, #8c8c8c 0%, #bfbfbf 100%)',
-        description: 'Solo 1 compra en 4 meses',
+        description: 'Solo 1 compra en total',
     },
 ];
 
@@ -68,24 +68,7 @@ export interface ClassifiedCustomer {
     avgSpentPerMonth: number;
     monthsWithOrders: number;
     lastOrderDate: dayjs.Dayjs | null;
-}
-
-// --- Helper: get the analysis period ---
-
-export function getAnalysisPeriod(now: dayjs.Dayjs = dayjs()): { start: dayjs.Dayjs; end: dayjs.Dayjs; months: dayjs.Dayjs[] } {
-    // End = last day of the previous month
-    const end = now.startOf('month'); // exclusive upper bound (start of current month)
-    // Start = first day, 4 months back from end
-    const start = end.subtract(4, 'month');
-
-    const months: dayjs.Dayjs[] = [];
-    let cursor = start;
-    while (cursor.isBefore(end)) {
-        months.push(cursor);
-        cursor = cursor.add(1, 'month');
-    }
-
-    return { start, end, months };
+    firstOrderDate: dayjs.Dayjs | null;
 }
 
 // --- Main classification ---
@@ -93,62 +76,68 @@ export function getAnalysisPeriod(now: dayjs.Dayjs = dayjs()): { start: dayjs.Da
 export function classifyCustomers(
     customers: Customer[],
     orders: Order[],
-    now?: dayjs.Dayjs,
-): { classified: ClassifiedCustomer[]; period: { start: dayjs.Dayjs; end: dayjs.Dayjs; months: dayjs.Dayjs[] } } {
-    const period = getAnalysisPeriod(now);
-    const { start, end, months } = period;
-
-    // Pre-filter delivered orders in the analysis window
-    const deliveredOrders = orders.filter(o => {
+    now: dayjs.Dayjs = dayjs(),
+): { classified: ClassifiedCustomer[]; periodLabel: string } {
+    
+    // Filter delivered orders only
+    const allDeliveredOrders = orders.filter(o => {
         if (o.isDeleted) return false;
         if (o.status !== 'Entregado') return false;
-        const d = getOrderDate(o);
-        if (!d) return false;
-        return (d.isAfter(start) || d.isSame(start, 'day')) && d.isBefore(end);
+        return !!getOrderDate(o);
     });
 
     // Group orders by customerId
     const ordersByCustomer = new Map<string, Order[]>();
-    deliveredOrders.forEach(o => {
+    allDeliveredOrders.forEach(o => {
         const list = ordersByCustomer.get(o.customerId) || [];
         list.push(o);
         ordersByCustomer.set(o.customerId, list);
     });
 
     const classified: ClassifiedCustomer[] = [];
+    const currentMonth = now.startOf('month');
 
     for (const customer of customers) {
         if (customer.isDeleted) continue;
 
         const custOrders = ordersByCustomer.get(customer.id);
-        if (!custOrders || custOrders.length === 0) continue; // no orders → inactive, skip
+        if (!custOrders || custOrders.length === 0) continue;
 
-        const totalOrders = custOrders.length;
-        const totalSpent = custOrders.reduce((acc, o) => acc + (o.total || 0), 0);
-
-        // Count distinct months with at least 1 order
-        const monthSet = new Set<string>();
+        // Find date range for this customer
+        let firstDate: dayjs.Dayjs | null = null;
         let lastDate: dayjs.Dayjs | null = null;
+        const monthSet = new Set<string>();
+        let totalSpent = 0;
+
         custOrders.forEach(o => {
             const d = getOrderDate(o);
             if (d) {
-                monthSet.add(d.format('YYYY-MM'));
+                if (!firstDate || d.isBefore(firstDate)) firstDate = d;
                 if (!lastDate || d.isAfter(lastDate)) lastDate = d;
+                monthSet.add(d.format('YYYY-MM'));
+                totalSpent += (o.total || 0);
             }
         });
+
+        if (!firstDate) continue;
+
+        // Calculate months since first order to NOW
+        // If first order was in May and now is May, it's 1 month.
+        // diff + 1 to include both ends
+        const monthsElapsed = Math.max(1, now.diff(firstDate.startOf('month'), 'month') + 1);
+        
+        const totalOrders = custOrders.length;
+        const avgOrdersPerMonth = totalOrders / monthsElapsed;
+        const avgSpentPerMonth = totalSpent / monthsElapsed;
         const monthsWithOrders = monthSet.size;
 
-        const numMonths = months.length; // should be 4
-        const avgOrdersPerMonth = totalOrders / numMonths;
-        const avgSpentPerMonth = totalSpent / numMonths;
-
-        // Classify (first matching wins)
+        // Classify
         let category: BehaviorCategory;
-        if (avgOrdersPerMonth >= 3 || avgSpentPerMonth >= 900) {
+        if (avgOrdersPerMonth >= 3 || avgSpentPerMonth >= 650) {
             category = 'Super Leal';
-        } else if (avgOrdersPerMonth >= 2 || avgSpentPerMonth >= 650) {
+        } else if (avgOrdersPerMonth >= 2 || avgSpentPerMonth >= 400) {
             category = 'Leal';
-        } else if (monthsWithOrders === numMonths) {
+        } else if (monthsWithOrders === monthsElapsed) {
             category = 'Ocasional';
         } else if (totalOrders >= 2) {
             category = 'Esporádico';
@@ -165,11 +154,14 @@ export function classifyCustomers(
             avgSpentPerMonth,
             monthsWithOrders,
             lastOrderDate: lastDate,
+            firstOrderDate: firstDate,
         });
     }
 
-    // Sort within each category: highest spenders first
     classified.sort((a, b) => b.totalSpent - a.totalSpent);
 
-    return { classified, period };
+    return { 
+        classified, 
+        periodLabel: 'Historial Completo' 
+    };
 }
