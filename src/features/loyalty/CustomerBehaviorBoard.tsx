@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, Tabs, Table, Tag, Input, Empty, Badge, Tooltip, Segmented, Space } from 'antd';
+import { Card, Tabs, Table, Tag, Input, Empty, Badge, Tooltip, Segmented, Space, Checkbox, Modal, Button, Typography } from 'antd';
 import { 
     SearchOutlined, 
     CalendarOutlined, 
@@ -8,7 +8,9 @@ import {
     TrophyFilled,
     DollarCircleFilled,
     ClockCircleFilled,
-    InfoCircleOutlined
+    InfoCircleOutlined,
+    WhatsAppOutlined,
+    SendOutlined
 } from '@ant-design/icons';
 import { Customer, Order } from '../../types';
 import {
@@ -72,7 +74,39 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
     const currentList = customerType === 'B2C' ? b2c : b2b;
     const currentCategories = customerType === 'B2C' ? B2C_CATEGORIES : B2B_CATEGORIES;
     const activeTab = customerType === 'B2C' ? activeB2CTab : activeB2BTab;
-    const setActiveTab = customerType === 'B2C' ? setActiveB2CTab : setActiveB2BTab;
+    
+    // WhatsApp feature state
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [isWhatsAppModalVisible, setIsWhatsAppModalVisible] = useState(false);
+    const [whatsappMessage, setWhatsappMessage] = useState('');
+    const [sendingIndex, setSendingIndex] = useState(0);
+
+    const setActiveTabAndClearSelection = (key: string) => {
+        if (customerType === 'B2C') setActiveB2CTab(key);
+        else setActiveB2BTab(key);
+        setSelectedRowKeys([]);
+    };
+
+    const openWhatsAppModal = () => {
+        const meta = currentCategories.find(c => c.key === activeTab);
+        setWhatsappMessage(meta?.defaultMessage || '¡Hola {{nombre}}!');
+        setSendingIndex(0);
+        setIsWhatsAppModalVisible(true);
+    };
+
+    const handleSendNextWhatsApp = () => {
+        if (sendingIndex >= selectedRowKeys.length) return;
+        const customerId = selectedRowKeys[sendingIndex];
+        const customerObj = filteredForTab.find(c => c.customer.id === customerId)?.customer;
+        if (customerObj) {
+            const firstName = customerObj.fullName.split(' ')[0] || customerObj.fullName;
+            const text = whatsappMessage.replace(/{{nombre}}/g, firstName);
+            const phone = customerObj.phone.replace(/\D/g, '');
+            const url = `https://wa.me/52${phone}?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+        setSendingIndex(prev => prev + 1);
+    };
 
     // Group by category
     const grouped = useMemo(() => {
@@ -117,7 +151,7 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                 return (
                     <div
                         key={cat.key}
-                        onClick={() => setActiveTab(cat.key)}
+                        onClick={() => setActiveTabAndClearSelection(cat.key)}
                         style={{
                             minWidth: isMobile ? 120 : 150,
                             flex: isMobile ? '0 0 auto' : 1,
@@ -218,23 +252,42 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
 
     // ─── Mobile card ────────────────────────────────────────
 
+    const handleSelectRow = (id: string, checked: boolean) => {
+        setSelectedRowKeys(prev =>
+            checked ? [...prev, id] : prev.filter(k => k !== id)
+        );
+    };
+
     const MobileCustomerCard = ({ item }: { item: ClassifiedCustomer }) => {
         const catMeta = currentCategories.find(c => c.key === item.category)!;
+        const isSelected = selectedRowKeys.includes(item.customer.id);
+        
         return (
             <div
                 style={{
-                    background: '#fff',
+                    background: isSelected ? '#e6f4ff' : '#fff',
                     borderRadius: 12,
                     padding: '12px 14px',
                     marginBottom: 10,
-                    border: '1px solid #f0f0f0',
+                    border: `1px solid ${isSelected ? '#1677ff' : '#f0f0f0'}`,
                     boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
                 }}
+                onClick={() => handleSelectRow(item.customer.id, !isSelected)}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div>
-                        <strong style={{ fontSize: 15, display: 'block' }}>{item.customer.fullName}</strong>
-                        <span style={{ color: '#8c8c8c', fontSize: 12 }}>📱 {item.customer.phone}</span>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <Checkbox 
+                            checked={isSelected} 
+                            onClick={e => e.stopPropagation()} 
+                            onChange={e => handleSelectRow(item.customer.id, e.target.checked)}
+                            style={{ marginTop: 2 }}
+                        />
+                        <div>
+                            <strong style={{ fontSize: 15, display: 'block' }}>{item.customer.fullName}</strong>
+                            <span style={{ color: '#8c8c8c', fontSize: 12 }}>📱 {item.customer.phone}</span>
+                        </div>
                     </div>
                     <Tag color={catMeta.color} style={{ margin: 0, fontSize: 11 }}>
                         {catMeta.emoji} {catMeta.key}
@@ -343,7 +396,7 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
             >
                 <Tabs
                     activeKey={activeTab}
-                    onChange={k => setActiveTab(k)}
+                    onChange={k => setActiveTabAndClearSelection(k)}
                     items={tabItems}
                     size={isMobile ? 'small' : 'middle'}
                     style={{ marginBottom: 0 }}
@@ -370,17 +423,29 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                     ) : null;
                 })()}
 
-                {/* Search */}
-                <div style={{ padding: isMobile ? '0 12px 12px' : '0 0 16px', }}>
+                {/* Search & Actions */}
+                <div style={{ padding: isMobile ? '0 12px 12px' : '0 0 16px', display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between' }}>
                     <Input
                         prefix={<SearchOutlined />}
                         placeholder="Buscar por nombre o teléfono…"
                         allowClear
                         size="large"
-                        style={{ width: isMobile ? '100%' : 350, borderRadius: 10 }}
+                        style={{ width: isMobile ? '100%' : 350, borderRadius: 10, flexShrink: 0 }}
                         onChange={e => setSearchText(e.target.value)}
                         value={searchText}
                     />
+                    
+                    {selectedRowKeys.length > 0 && (
+                        <Button 
+                            type="primary" 
+                            size="large"
+                            icon={<WhatsAppOutlined />}
+                            style={{ backgroundColor: '#25D366', borderRadius: 10 }}
+                            onClick={openWhatsAppModal}
+                        >
+                            Enviar a {selectedRowKeys.length} seleccionados
+                        </Button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -392,12 +457,28 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                     />
                 ) : isMobile ? (
                     <div style={{ padding: '0 12px 12px', maxHeight: '60vh', overflowY: 'auto' }}>
+                        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                            <Checkbox 
+                                indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < filteredForTab.length}
+                                checked={selectedRowKeys.length === filteredForTab.length && filteredForTab.length > 0}
+                                onChange={e => {
+                                    if (e.target.checked) setSelectedRowKeys(filteredForTab.map(c => c.customer.id));
+                                    else setSelectedRowKeys([]);
+                                }}
+                            >
+                                Seleccionar Todos
+                            </Checkbox>
+                        </div>
                         {filteredForTab.map(item => (
                             <MobileCustomerCard key={item.customer.id} item={item} />
                         ))}
                     </div>
                 ) : (
                     <Table
+                        rowSelection={{
+                            selectedRowKeys,
+                            onChange: (keys) => setSelectedRowKeys(keys)
+                        }}
                         dataSource={filteredForTab}
                         columns={columns}
                         rowKey={r => r.customer.id}
@@ -407,6 +488,63 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                     />
                 )}
             </Card>
+
+            {/* WhatsApp Send Modal */}
+            <Modal
+                title={
+                    <span>
+                        <WhatsAppOutlined style={{ color: '#25D366', marginRight: 8 }} />
+                        Enviar Mensaje ({sendingIndex}/{selectedRowKeys.length})
+                    </span>
+                }
+                open={isWhatsAppModalVisible}
+                onCancel={() => setIsWhatsAppModalVisible(false)}
+                footer={null}
+                destroyOnClose
+            >
+                <div style={{ marginBottom: 16 }}>
+                    <Typography.Text type="secondary">
+                        Revisa el mensaje. Puedes usar <Tag>{"{{nombre}}"}</Tag> para personalizarlo.
+                        El navegador no permite abrir múltiples pestañas, por lo que deberás hacer clic en "Enviar y Continuar" por cada cliente.
+                    </Typography.Text>
+                </div>
+                
+                <Input.TextArea
+                    rows={6}
+                    value={whatsappMessage}
+                    onChange={e => setWhatsappMessage(e.target.value)}
+                    style={{ marginBottom: 20 }}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography.Text strong>
+                        {sendingIndex < selectedRowKeys.length ? (
+                            <>
+                                Siguiente: {filteredForTab.find(c => c.customer.id === selectedRowKeys[sendingIndex])?.customer.fullName}
+                            </>
+                        ) : (
+                            <span style={{ color: '#52c41a' }}>¡Todos los mensajes enviados!</span>
+                        )}
+                    </Typography.Text>
+                    
+                    {sendingIndex < selectedRowKeys.length ? (
+                        <Button 
+                            type="primary" 
+                            icon={<SendOutlined />}
+                            onClick={handleSendNextWhatsApp}
+                        >
+                            Enviar y Continuar
+                        </Button>
+                    ) : (
+                        <Button onClick={() => {
+                            setIsWhatsAppModalVisible(false);
+                            setSelectedRowKeys([]);
+                        }}>
+                            Terminar
+                        </Button>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 };

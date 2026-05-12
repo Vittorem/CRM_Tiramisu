@@ -15,6 +15,7 @@ export interface CategoryMeta {
     color: string;
     gradient: string;
     description: string;
+    defaultMessage?: string;
 }
 
 export const B2C_CATEGORIES: CategoryMeta[] = [
@@ -24,6 +25,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'gold',
         gradient: 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
         description: '≥5 compras y compras en ≥3 meses distintos (4 meses)',
+        defaultMessage: '¡Hola {{nombre}}! 👑 Eres de nuestros clientes más SUPER LEALES. Como agradecimiento, tienes envío gratis en tu próximo pedido y acceso anticipado a nuestras promociones. ¡Gracias por preferirnos!',
     },
     {
         key: 'Leal',
@@ -31,6 +33,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'blue',
         gradient: 'linear-gradient(135deg, #1890ff 0%, #69c0ff 100%)',
         description: '3-4 compras y compras en ≥2 meses distintos (4 meses)',
+        defaultMessage: '¡Hola {{nombre}}! ⭐ Gracias por ser un cliente LEAL. Disfruta de un postre de regalo en tu próxima compra mayor a $300. ¡Te esperamos!',
     },
     {
         key: 'Ocasional',
@@ -38,6 +41,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'green',
         gradient: 'linear-gradient(135deg, #52c41a 0%, #95de64 100%)',
         description: '2 compras total y última compra ≤ 60 días',
+        defaultMessage: '¡Hola {{nombre}}! 🔁 Nos encanta verte por aquí. En tu próximo pedido te incluimos un detalle sorpresa para que sigas disfrutando. ¡Haz tu pedido hoy!',
     },
     {
         key: 'Esporádico',
@@ -45,6 +49,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'orange',
         gradient: 'linear-gradient(135deg, #fa8c16 0%, #ffc069 100%)',
         description: '2 compras total, pero sin compra en últimos 60 días',
+        defaultMessage: '¡Hola {{nombre}}! 💤 Ha pasado un tiempo desde tu última compra. Queremos verte de nuevo, ¡te regalamos un 10% de descuento en tu próximo pedido!',
     },
     {
         key: 'Único',
@@ -52,6 +57,7 @@ export const B2C_CATEGORIES: CategoryMeta[] = [
         color: 'default',
         gradient: 'linear-gradient(135deg, #8c8c8c 0%, #bfbfbf 100%)',
         description: '1 sola compra en el periodo de 4 meses',
+        defaultMessage: '¡Hola {{nombre}}! 1️⃣ Gracias por habernos probado. Nos encantaría que vuelvas a disfrutar nuestros productos. ¡Aprovecha nuestra promoción de temporada!',
     },
 ];
 
@@ -62,6 +68,7 @@ export const B2B_CATEGORIES: CategoryMeta[] = [
         color: 'purple',
         gradient: 'linear-gradient(135deg, #722ed1 0%, #b37feb 100%)',
         description: '3+ pedidos o en 2+ meses Y gasto alto (≥$900)',
+        defaultMessage: '¡Hola {{nombre}}! 🏢 Apreciamos mucho la confianza en nosotros como tu proveedor clave. Tienes prioridad en entregas y soporte dedicado. ¡Estamos a tus órdenes!',
     },
     {
         key: 'Recurrente',
@@ -69,6 +76,7 @@ export const B2B_CATEGORIES: CategoryMeta[] = [
         color: 'cyan',
         gradient: 'linear-gradient(135deg, #13c2c2 0%, #5cdbd3 100%)',
         description: '2 pedidos en el periodo',
+        defaultMessage: '¡Hola {{nombre}}! 🔄 Gracias por tus pedidos constantes. Te recordamos que tienes descuentos por volumen en tus próximas compras. ¡Hagamos crecer tu negocio!',
     },
     {
         key: 'Piloto',
@@ -76,6 +84,7 @@ export const B2B_CATEGORIES: CategoryMeta[] = [
         color: 'blue',
         gradient: 'linear-gradient(135deg, #1677ff 0%, #69b1ff 100%)',
         description: '1 pedido en el periodo',
+        defaultMessage: '¡Hola {{nombre}}! 🚀 ¿Cómo te fue con tu primer pedido? Queremos ser tu proveedor de confianza. Contáctanos para armar una propuesta a tu medida.',
     },
     {
         key: 'En Riesgo',
@@ -83,6 +92,7 @@ export const B2B_CATEGORIES: CategoryMeta[] = [
         color: 'red',
         gradient: 'linear-gradient(135deg, #f5222d 0%, #ff7875 100%)',
         description: 'Tenía 2+ pedidos pero no compra hace 45-60 días',
+        defaultMessage: '¡Hola {{nombre}}! ⚠️ Te extrañamos. Queremos seguir siendo tu aliado comercial. Platícanos, ¿cómo podemos mejorar para tu próximo pedido?',
     },
 ];
 
