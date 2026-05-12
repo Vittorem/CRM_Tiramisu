@@ -1,12 +1,22 @@
 import { useState, useMemo } from 'react';
-import { Card, Tabs, Table, Tag, Input, Empty, Badge, Tooltip } from 'antd';
-import { SearchOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Tabs, Table, Tag, Input, Empty, Badge, Tooltip, Segmented, Space } from 'antd';
+import { 
+    SearchOutlined, 
+    CalendarOutlined, 
+    UserOutlined, 
+    ShopOutlined,
+    TrophyFilled,
+    DollarCircleFilled,
+    ClockCircleFilled,
+    InfoCircleOutlined
+} from '@ant-design/icons';
 import { Customer, Order } from '../../types';
 import {
     classifyCustomers,
     ClassifiedCustomer,
-    BEHAVIOR_CATEGORIES,
-    BehaviorCategory,
+    B2C_CATEGORIES,
+    B2B_CATEGORIES,
+    CategoryMeta,
 } from '../../utils/customerBehavior';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import dayjs from 'dayjs';
@@ -23,26 +33,59 @@ const fmt = (n: number) =>
 
 const fmtDate = (d: dayjs.Dayjs | null) => (d ? d.format('DD MMM YYYY') : '—');
 
+// ─── Badge Renderer ──────────────────────────────────────────────────
+
+const BadgeDisplay = ({ badges }: { badges: ClassifiedCustomer['badges'] }) => (
+    <Space size={4} style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {badges.isHighValue && (
+            <Tooltip title="Alto Valor (Gasto ≥ $900 en 4 meses)">
+                <Tag color="gold" icon={<TrophyFilled />} style={{ borderRadius: 4, margin: 0 }}>Valor</Tag>
+            </Tooltip>
+        )}
+        {badges.isHighTicket && (
+            <Tooltip title="Ticket Alto (Promedio ≥ $250)">
+                <Tag color="green" icon={<DollarCircleFilled />} style={{ borderRadius: 4, margin: 0 }}>Ticket</Tag>
+            </Tooltip>
+        )}
+        {badges.isRecent && (
+            <Tooltip title="Reciente (Compra en últimos 30 días)">
+                <Tag color="blue" icon={<ClockCircleFilled />} style={{ borderRadius: 4, margin: 0 }}>Reciente</Tag>
+            </Tooltip>
+        )}
+    </Space>
+);
+
 // ─── Component ───────────────────────────────────────────────────────
 
 export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
     const isMobile = useIsMobile();
+    const [customerType, setCustomerType] = useState<'B2C' | 'B2B'>('B2C');
     const [searchText, setSearchText] = useState('');
-    const [activeTab, setActiveTab] = useState<BehaviorCategory>('Super Leal');
+    const [activeB2CTab, setActiveB2CTab] = useState<string>('Super Leal');
+    const [activeB2BTab, setActiveB2BTab] = useState<string>('Cuenta Clave');
 
     // Classification
-    const { classified, periodLabel } = useMemo(
+    const { b2c, b2b } = useMemo(
         () => classifyCustomers(customers, orders),
         [customers, orders],
     );
 
+    const currentList = customerType === 'B2C' ? b2c : b2b;
+    const currentCategories = customerType === 'B2C' ? B2C_CATEGORIES : B2B_CATEGORIES;
+    const activeTab = customerType === 'B2C' ? activeB2CTab : activeB2BTab;
+    const setActiveTab = customerType === 'B2C' ? setActiveB2CTab : setActiveB2BTab;
+
     // Group by category
     const grouped = useMemo(() => {
-        const map = new Map<BehaviorCategory, ClassifiedCustomer[]>();
-        BEHAVIOR_CATEGORIES.forEach(c => map.set(c.key, []));
-        classified.forEach(c => map.get(c.category)!.push(c));
+        const map = new Map<string, ClassifiedCustomer[]>();
+        currentCategories.forEach(c => map.set(c.key, []));
+        currentList.forEach(c => {
+            const list = map.get(c.category) || [];
+            list.push(c);
+            map.set(c.category, list);
+        });
         return map;
-    }, [classified]);
+    }, [currentList, currentCategories]);
 
     // Filter by search
     const filteredForTab = useMemo(() => {
@@ -58,22 +101,19 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
 
     // ─── Summary cards ──────────────────────────────────────
 
-    const totalClassified = classified.length;
-
     const SummaryCards = () => (
         <div
             style={{
                 display: 'flex',
                 gap: 10,
                 overflowX: 'auto',
-                paddingBottom: 4,
+                paddingBottom: 8,
                 marginBottom: 16,
                 WebkitOverflowScrolling: 'touch',
             }}
         >
-            {BEHAVIOR_CATEGORIES.map(cat => {
+            {currentCategories.map(cat => {
                 const count = grouped.get(cat.key)?.length || 0;
-                const pct = totalClassified > 0 ? Math.round((count / totalClassified) * 100) : 0;
                 const isActive = activeTab === cat.key;
                 return (
                     <div
@@ -114,15 +154,6 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                         >
                             {count}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 11,
-                                color: isActive ? 'rgba(255,255,255,0.85)' : '#8c8c8c',
-                                marginTop: 2,
-                            }}
-                        >
-                            {pct}% del total
-                        </div>
                     </div>
                 );
             })}
@@ -144,11 +175,17 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
             ),
         },
         {
-            title: 'Compras',
+            title: 'Badges',
+            key: 'badges',
+            width: 200,
+            render: (_: unknown, record: ClassifiedCustomer) => <BadgeDisplay badges={record.badges} />,
+        },
+        {
+            title: 'Compras (4m)',
             dataIndex: 'totalOrders',
             key: 'totalOrders',
             sorter: (a: ClassifiedCustomer, b: ClassifiedCustomer) => a.totalOrders - b.totalOrders,
-            width: 100,
+            width: 110,
             align: 'center' as const,
             render: (v: number) => <strong>{v}</strong>,
         },
@@ -162,38 +199,12 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
             render: (v: number) => <span style={{ fontWeight: 600 }}>{fmt(v)}</span>,
         },
         {
-            title: 'Prom. Mensual',
-            dataIndex: 'avgSpentPerMonth',
-            key: 'avgSpentPerMonth',
-            width: 130,
+            title: 'Ticket Prom.',
+            dataIndex: 'avgTicket',
+            key: 'avgTicket',
+            width: 120,
             align: 'right' as const,
             render: (v: number) => fmt(v),
-        },
-        {
-            title: 'Meses Activos',
-            dataIndex: 'monthsWithOrders',
-            key: 'monthsWithOrders',
-            width: 120,
-            align: 'center' as const,
-            render: (v: number) => (
-                <Tooltip title={`${v} de 4 meses con al menos 1 compra`}>
-                    <span>
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <span
-                                key={i}
-                                style={{
-                                    display: 'inline-block',
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    background: i < v ? '#52c41a' : '#f0f0f0',
-                                    marginRight: 3,
-                                }}
-                            />
-                        ))}
-                    </span>
-                </Tooltip>
-            ),
         },
         {
             title: 'Última Compra',
@@ -209,52 +220,48 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
     // ─── Mobile card ────────────────────────────────────────
 
     const MobileCustomerCard = ({ item }: { item: ClassifiedCustomer }) => {
-        const catMeta = BEHAVIOR_CATEGORIES.find(c => c.key === item.category)!;
+        const catMeta = currentCategories.find(c => c.key === item.category)!;
         return (
             <div
                 style={{
                     background: '#fff',
                     borderRadius: 12,
                     padding: '12px 14px',
-                    marginBottom: 8,
+                    marginBottom: 10,
                     border: '1px solid #f0f0f0',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
                 }}
             >
-                {/* Row 1: name + badge */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <strong style={{ fontSize: 15 }}>{item.customer.fullName}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <div>
+                        <strong style={{ fontSize: 15, display: 'block' }}>{item.customer.fullName}</strong>
+                        <span style={{ color: '#8c8c8c', fontSize: 12 }}>📱 {item.customer.phone}</span>
+                    </div>
                     <Tag color={catMeta.color} style={{ margin: 0, fontSize: 11 }}>
                         {catMeta.emoji} {catMeta.key}
                     </Tag>
                 </div>
 
-                {/* Row 2: phone */}
-                <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 8 }}>📱 {item.customer.phone}</div>
+                <div style={{ marginBottom: 10 }}>
+                    <BadgeDisplay badges={item.badges} />
+                </div>
 
-                {/* Row 3: metrics grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 13 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 13, background: '#fafafa', padding: 8, borderRadius: 8 }}>
                     <div>
-                        <span style={{ color: '#8c8c8c' }}>Compras: </span>
+                        <span style={{ color: '#8c8c8c' }}>Pedidos: </span>
                         <strong>{item.totalOrders}</strong>
                     </div>
                     <div>
-                        <span style={{ color: '#8c8c8c' }}>Gasto: </span>
+                        <span style={{ color: '#8c8c8c' }}>Total: </span>
                         <strong>{fmt(item.totalSpent)}</strong>
                     </div>
                     <div>
-                        <span style={{ color: '#8c8c8c' }}>Prom/mes: </span>
-                        <strong>{fmt(item.avgSpentPerMonth)}</strong>
+                        <span style={{ color: '#8c8c8c' }}>Ticket: </span>
+                        <strong>{fmt(item.avgTicket)}</strong>
                     </div>
-                    <div>
-                        <span style={{ color: '#8c8c8c' }}>Meses: </span>
-                        <strong>{item.monthsWithOrders}/4</strong>
+                    <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: '#bfbfbf', fontSize: 11 }}>{fmtDate(item.lastOrderDate)}</span>
                     </div>
-                </div>
-
-                {/* Row 4: last order */}
-                <div style={{ fontSize: 12, color: '#bfbfbf', marginTop: 6, textAlign: 'right' }}>
-                    Última compra: {fmtDate(item.lastOrderDate)}
                 </div>
             </div>
         );
@@ -262,7 +269,7 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
 
     // ─── Tab items ──────────────────────────────────────────
 
-    const tabItems = BEHAVIOR_CATEGORIES.map(cat => {
+    const tabItems = currentCategories.map(cat => {
         const count = grouped.get(cat.key)?.length || 0;
         return {
             key: cat.key,
@@ -288,22 +295,42 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
 
     return (
         <div>
-            {/* Period indicator */}
+            {/* Top Selector: B2C vs B2B */}
+            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
+                <Segmented
+                    value={customerType}
+                    onChange={v => setCustomerType(v as 'B2C' | 'B2B')}
+                    options={[
+                        { label: 'Clientes Finales (B2C)', value: 'B2C', icon: <UserOutlined /> },
+                        { label: 'Negocios (B2B)', value: 'B2B', icon: <ShopOutlined /> },
+                    ]}
+                    block={isMobile}
+                    size="large"
+                    style={{ padding: 4, borderRadius: 12 }}
+                />
+            </div>
+
+            {/* Analysis period and stats */}
             <div
                 style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
+                    flexDirection: isMobile ? 'column' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: isMobile ? 'flex-start' : 'center',
                     marginBottom: 16,
-                    fontSize: isMobile ? 13 : 14,
-                    color: '#8c8c8c',
+                    gap: 8,
                 }}
             >
-                <CalendarOutlined />
-                Periodo de análisis: <strong style={{ color: '#595959' }}>{periodLabel}</strong>
-                <span style={{ marginLeft: 4 }}>
-                    — <strong>{totalClassified}</strong> clientes analizados
-                </span>
+                <div style={{ fontSize: 14, color: '#8c8c8c', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CalendarOutlined />
+                    Análisis: <strong style={{ color: '#595959' }}>Últimos 4 meses</strong>
+                    <Tooltip title="Basado en pedidos Entregados. B2C y B2B tienen reglas distintas.">
+                        <InfoCircleOutlined style={{ fontSize: 12 }} />
+                    </Tooltip>
+                </div>
+                <div style={{ fontSize: 13, color: '#8c8c8c' }}>
+                    Mostrando <strong>{currentList.length}</strong> {customerType === 'B2C' ? 'clientes B2C' : 'negocios B2B'}
+                </div>
             </div>
 
             {/* Summary cards */}
@@ -313,11 +340,11 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
             <Card
                 size="small"
                 styles={{ body: { padding: isMobile ? '8px 0' : '12px 16px' } }}
-                style={{ borderRadius: 12 }}
+                style={{ borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}
             >
                 <Tabs
                     activeKey={activeTab}
-                    onChange={k => setActiveTab(k as BehaviorCategory)}
+                    onChange={k => setActiveTab(k)}
                     items={tabItems}
                     size={isMobile ? 'small' : 'middle'}
                     style={{ marginBottom: 0 }}
@@ -325,28 +352,33 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
 
                 {/* Category description */}
                 {(() => {
-                    const meta = BEHAVIOR_CATEGORIES.find(c => c.key === activeTab);
+                    const meta = currentCategories.find(c => c.key === activeTab);
                     return meta ? (
                         <div
                             style={{
-                                padding: isMobile ? '6px 12px' : '6px 0',
+                                padding: isMobile ? '8px 12px' : '10px 0',
                                 fontSize: 12,
                                 color: '#8c8c8c',
                                 marginBottom: 8,
+                                background: isMobile ? '#fdfdfd' : 'transparent',
+                                borderLeft: `3px solid ${meta.color}`,
+                                paddingLeft: 12,
+                                margin: isMobile ? '0 12px 12px' : '0 0 12px',
                             }}
                         >
-                            {meta.description}
+                            <strong>Criterio:</strong> {meta.description}
                         </div>
                     ) : null;
                 })()}
 
                 {/* Search */}
-                <div style={{ padding: isMobile ? '0 12px 8px' : '0 0 12px', }}>
+                <div style={{ padding: isMobile ? '0 12px 12px' : '0 0 16px', }}>
                     <Input
                         prefix={<SearchOutlined />}
                         placeholder="Buscar por nombre o teléfono…"
                         allowClear
-                        style={{ width: isMobile ? '100%' : 300, borderRadius: 8 }}
+                        size="large"
+                        style={{ width: isMobile ? '100%' : 350, borderRadius: 10 }}
                         onChange={e => setSearchText(e.target.value)}
                         value={searchText}
                     />
@@ -356,7 +388,7 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                 {filteredForTab.length === 0 ? (
                     <Empty
                         description="No hay clientes en esta categoría"
-                        style={{ padding: 32 }}
+                        style={{ padding: 48 }}
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                     />
                 ) : isMobile ? (
@@ -370,9 +402,8 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
                         dataSource={filteredForTab}
                         columns={columns}
                         rowKey={r => r.customer.id}
-                        pagination={false}
-                        size="small"
-                        scroll={{ y: 500 }}
+                        pagination={{ pageSize: 10, hideOnSinglePage: true }}
+                        size="middle"
                         style={{ fontSize: 13 }}
                     />
                 )}
