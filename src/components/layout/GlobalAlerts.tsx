@@ -1,24 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Badge, Drawer, List, Button, Typography, Tag, Space, message } from 'antd';
-import { BellOutlined, ShoppingOutlined, StopOutlined } from '@ant-design/icons';
+import { Badge, Drawer, List, Button, Typography, Tag, Space } from 'antd';
+import { BellOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
-import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
-import { arrayUnion } from 'firebase/firestore';
-import { Order, Customer, InventoryItem, B2BDeliverySchedule } from '../../types';
+import { useFirestoreSubscription } from '../../hooks/useFirestore';
+import { Order, Customer, InventoryItem } from '../../types';
 import { generateIntelligentAlerts, PeriodMetrics } from '../../utils/intelligentAlerts';
 import { getDeliveredOrdersInRange } from '../../utils/dateHelpers';
-import { getPendingB2BAlerts } from '../../utils/b2bAlerts';
 
 export const GlobalAlerts = () => {
     const { data: orders } = useFirestoreSubscription<Order>('orders');
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
     const { data: inventory } = useFirestoreSubscription<InventoryItem>('inventory');
-    const { data: b2bSchedules } = useFirestoreSubscription<B2BDeliverySchedule>('b2b_schedules');
-    const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
 
     const [isOpen, setIsOpen] = useState(false);
-    const navigate = useNavigate();
 
     // Calculate metrics for the last 30 days
     const intelligentAlerts = useMemo(() => {
@@ -50,29 +44,9 @@ export const GlobalAlerts = () => {
         return inventory.filter(i => i.stockPackages <= (i.minPackages || 0) && i.isActive !== false);
     }, [inventory]);
 
-    // B2B delivery alerts — only pending (no order created yet)
-    const b2bAlerts = useMemo(() => {
-        return getPendingB2BAlerts(b2bSchedules, orders);
-    }, [b2bSchedules, orders]);
+    const totalAlerts = intelligentAlerts.length + inventoryAlerts.length;
 
-    const totalAlerts = intelligentAlerts.length + inventoryAlerts.length + b2bAlerts.length;
 
-    const handleCreateOrderFromAlert = (customerId: string) => {
-        setIsOpen(false);
-        navigate('/orders', { state: { createNew: true, prefillCustomerId: customerId } });
-    };
-
-    const handleDismissB2BAlert = async (scheduleId: string, targetDateStr: string) => {
-        try {
-            await updateSchedule(scheduleId, {
-                dismissedDates: arrayUnion(targetDateStr) as unknown as string[]
-            });
-            message.success('Notificación omitida');
-        } catch (error) {
-            console.error('Error al omitir notificación', error);
-            message.error('Error al omitir la notificación');
-        }
-    };
 
     return (
         <>
@@ -99,64 +73,7 @@ export const GlobalAlerts = () => {
                     </div>
                 ) : (
                     <Space direction="vertical" style={{ width: '100%' }} size="large">
-                        {/* B2B Delivery Alerts */}
-                        {b2bAlerts.length > 0 && (
-                            <div>
-                                <Typography.Title level={5}>
-                                    🚚 Entregas B2B Pendientes ({b2bAlerts.length})
-                                </Typography.Title>
-                                <List
-                                    size="small"
-                                    dataSource={b2bAlerts}
-                                    renderItem={alert => {
-                                        const isToday = alert.urgency === 'today';
-                                        return (
-                                            <List.Item
-                                                actions={[
-                                                    <Button
-                                                        key="dismiss"
-                                                        type="text"
-                                                        size="small"
-                                                        icon={<StopOutlined />}
-                                                        onClick={() => handleDismissB2BAlert(alert.schedule.id, alert.targetDateStr)}
-                                                    >
-                                                        Omitir
-                                                    </Button>,
-                                                    <Button
-                                                        key="create"
-                                                        type="primary"
-                                                        size="small"
-                                                        icon={<ShoppingOutlined />}
-                                                        onClick={() => handleCreateOrderFromAlert(alert.schedule.customerId)}
-                                                    >
-                                                        Crear Pedido
-                                                    </Button>
-                                                ]}
-                                            >
-                                                <List.Item.Meta
-                                                    title={
-                                                        <Space>
-                                                            <span>{alert.schedule.customerName}</span>
-                                                            <Tag color={isToday ? 'red' : 'orange'}>
-                                                                {isToday ? 'HOY' : 'MAÑANA'}
-                                                            </Tag>
-                                                        </Space>
-                                                    }
-                                                    description={
-                                                        <span style={{ fontSize: 13 }}>
-                                                            {isToday
-                                                                ? `Hoy es día de entrega (${alert.deliveryDay}). ¡Genera el pedido!`
-                                                                : `Mañana ${alert.deliveryDay} es día de entrega. Prepara el pedido.`
-                                                            }
-                                                        </span>
-                                                    }
-                                                />
-                                            </List.Item>
-                                        );
-                                    }}
-                                />
-                            </div>
-                        )}
+
 
                         {inventoryAlerts.length > 0 && (
                             <div>

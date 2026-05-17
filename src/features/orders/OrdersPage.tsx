@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Button, Segmented, message, DatePicker, Skeleton, Space } from 'antd';
-import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Button, Segmented, message, DatePicker, Skeleton } from 'antd';
+import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
-import { Order, OrderStatus, B2BDeliverySchedule } from '../../types';
+import { Order, OrderStatus } from '../../types';
 import { OrderForm } from './components/OrderForm';
 import { OrderKanbanBoard } from './components/OrderKanbanBoard';
 import { OrderSummary } from './components/OrderSummary';
@@ -10,19 +10,13 @@ import { OrderList } from './OrderList';
 import { getOrderDate } from '../../utils/dateHelpers';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useLocation } from 'react-router-dom';
-import { getPendingB2BAlerts } from '../../utils/b2bAlerts';
-import { arrayUnion } from 'firebase/firestore';
 
 
 export const OrdersPage = () => {
     const { data: orders, loading: loadingOrders } = useFirestoreSubscription<Order>('orders');
     const { add, update, softDelete } = useFirestoreMutation('orders');
-    const { data: b2bSchedules } = useFirestoreSubscription<B2BDeliverySchedule>('b2b_schedules');
-    const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
 
     const isMobile = useIsMobile();
-    const location = useLocation();
 
     const [viewMode, setViewMode] = useState<'Kanban' | 'List'>('Kanban');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,43 +24,10 @@ export const OrdersPage = () => {
     const [selectedMonth, setSelectedMonth] = useState(dayjs());
     const [prefillCustomerId, setPrefillCustomerId] = useState<string | null>(null);
 
-    // Handle navigation state for creating orders from B2B alerts
-    useEffect(() => {
-        const state = location.state as { createNew?: boolean; prefillCustomerId?: string } | null;
-        if (state?.createNew) {
-            if (state.prefillCustomerId) {
-                setPrefillCustomerId(state.prefillCustomerId);
-            }
-            setEditingOrder(null);
-            setIsFormOpen(true);
-            // Clean navigation state
-            window.history.replaceState({}, document.title);
-        }
-    }, [location.state]);
-
-    // B2B delivery alerts
-    const pendingB2BAlerts = useMemo(() => {
-        return getPendingB2BAlerts(b2bSchedules, orders);
-    }, [b2bSchedules, orders]);
-
-
-
     const handleCreate = (customerId?: string) => {
         setEditingOrder(null);
         setPrefillCustomerId(customerId || null);
         setIsFormOpen(true);
-    };
-
-    const handleDismissB2BAlert = async (scheduleId: string, targetDateStr: string) => {
-        try {
-            await updateSchedule(scheduleId, {
-                dismissedDates: arrayUnion(targetDateStr) as unknown as string[]
-            });
-            message.success('Alerta de entrega omitida');
-        } catch (error) {
-            console.error('Error al omitir notificación', error);
-            message.error('Error al omitir la notificación');
-        }
     };
 
     const handleEdit = (order: Order) => {
@@ -151,72 +112,7 @@ export const OrdersPage = () => {
                 </Button>
             </div>
 
-            {/* B2B Delivery Alert Banner */}
-            {pendingB2BAlerts.length > 0 && (
-                <div style={{
-                    background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)',
-                    border: '1px solid #ffe58f',
-                    borderRadius: 10,
-                    padding: isMobile ? '10px 12px' : '12px 16px',
-                    marginBottom: 16,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: '#d48806', fontSize: 14 }}>
-                        <SendOutlined /> Entregas B2B Pendientes
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {pendingB2BAlerts.map(alert => (
-                            <div
-                                key={`${alert.schedule.id}-${alert.urgency}`}
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    background: '#fff',
-                                    borderRadius: 8,
-                                    padding: '8px 12px',
-                                    border: alert.urgency === 'today' ? '1px solid #ff7a45' : '1px solid #ffd591',
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontWeight: 500 }}>{alert.schedule.customerName}</span>
-                                    <span style={{
-                                        fontSize: 11,
-                                        padding: '1px 8px',
-                                        borderRadius: 10,
-                                        fontWeight: 600,
-                                        background: alert.urgency === 'today' ? '#fff2e8' : '#fffbe6',
-                                        color: alert.urgency === 'today' ? '#d4380d' : '#d48806',
-                                        border: `1px solid ${alert.urgency === 'today' ? '#ffbb96' : '#ffe58f'}`,
-                                    }}>
-                                        {alert.urgency === 'today' ? `HOY ${alert.deliveryDay}` : `Mañana ${alert.deliveryDay}`}
-                                    </span>
-                                </div>
-                                <Space size="small">
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        icon={<StopOutlined />}
-                                        onClick={() => handleDismissB2BAlert(alert.schedule.id, alert.targetDateStr)}
-                                    >
-                                        {!isMobile && 'Omitir'}
-                                    </Button>
-                                    <Button
-                                        type="primary"
-                                        size="small"
-                                        onClick={() => handleCreate(alert.schedule.customerId)}
-                                        style={{ borderRadius: 6 }}
-                                    >
-                                        Crear Pedido
-                                    </Button>
-                                </Space>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+
 
             {!isMobile && (
                 <div style={{ marginBottom: 16 }}>
