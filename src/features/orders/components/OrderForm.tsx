@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Alert, Checkbox, Grid, TimePicker } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
-import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, SystemSettings, PAYMENT_STATUSES } from '../../../types';
+import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
 import { getPointsCostForProduct } from '../../../utils/loyalty';
 import dayjs from 'dayjs';
 
@@ -32,10 +32,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const { data: flavors } = useFirestoreSubscription<Flavor>('catalog_flavors');
     const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
     const { data: orders } = useFirestoreSubscription<Order>('orders');
-    const { data: settings } = useFirestoreSubscription<SystemSettings>('settings');
-
-    const loyaltySettings = settings[0];
-    const isLoyaltyEnabled = loyaltySettings ? loyaltySettings.loyaltyEnabled : true;
+    const isLoyaltyEnabled = false;
 
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });

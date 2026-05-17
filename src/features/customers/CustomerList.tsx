@@ -68,16 +68,7 @@ export const CustomerList = () => {
             dataIndex: 'phone',
             key: 'phone',
         },
-        {
-            title: 'Puntos Lealtad',
-            dataIndex: 'loyaltyPoints',
-            key: 'loyaltyPoints',
-            render: (points: number) => (
-                <Tag color={points >= 6 ? 'gold' : 'blue'}>
-                    {points || 0} pts
-                </Tag>
-            ),
-        },
+
         {
             title: 'Contacto',
             dataIndex: 'mainContactMethod',
@@ -151,9 +142,6 @@ export const CustomerList = () => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <strong style={{ fontSize: 16, color: '#333' }}>{item.fullName}</strong>
-                                    <Tag color={(item.loyaltyPoints || 0) >= 6 ? 'gold' : 'blue'} style={{ margin: 0 }}>
-                                        {item.loyaltyPoints || 0} pts
-                                    </Tag>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                                     <span style={{ color: '#666', fontSize: 14 }}>{item.phone}</span>

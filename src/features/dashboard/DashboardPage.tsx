@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Row, Col, Card, Typography, Statistic, DatePicker, Divider, Button, Drawer, List, Result, Tabs, Tag, Segmented } from 'antd';
+import { Row, Col, Card, Typography, Statistic, DatePicker, Divider, Button, Drawer, List, Result, Segmented } from 'antd';
 import {
     DollarOutlined,
     ShoppingCartOutlined,
@@ -8,8 +8,6 @@ import {
     FallOutlined,
     ExclamationCircleOutlined,
     TrophyOutlined,
-    LineChartOutlined,
-    ClockCircleOutlined,
     CarOutlined,
     CrownOutlined,
 } from '@ant-design/icons';
@@ -29,15 +27,7 @@ import {
     formatRFMForChart,
     type RFMSegmentResult
 } from '../../utils/rfmAnalysis';
-import {
-    analyzeChannelPerformance,
-    formatChannelForChart,
-    type ChannelPerformance
-} from '../../utils/channelAnalysis';
-import {
-    analyzeTemporalPatterns,
-    formatHoursByTimeBlock
-} from '../../utils/temporalAnalysis';
+
 // Removed unused IntelligentAlerts because they are now in Top App Bar
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -208,21 +198,6 @@ export const DashboardPage = () => {
         [filteredCustomers, filteredOrders, dateRange]
     );
 
-    // ─── Previous period for comparisons ──────────────────────────────
-
-    const previousPeriodRange = useMemo<[dayjs.Dayjs, dayjs.Dayjs]>(() => {
-        const duration = dateRange[1].diff(dateRange[0], 'days');
-        return [
-            dateRange[0].subtract(duration, 'days'),
-            dateRange[0].subtract(1, 'days'),
-        ];
-    }, [dateRange]);
-
-    const previousDeliveredOrders = useMemo(
-        () => getDeliveredOrdersInRange(filteredOrders, previousPeriodRange[0], previousPeriodRange[1]),
-        [filteredOrders, previousPeriodRange]
-    );
-
     // ─── RFM Analysis ──────────────────────────────────────────────────
 
     const rfmScores = useMemo(
@@ -238,30 +213,6 @@ export const DashboardPage = () => {
     const rfmChartData = useMemo(
         () => formatRFMForChart(rfmSegments),
         [rfmSegments]
-    );
-
-    // ─── Channel Analysis ──────────────────────────────────────────────
-
-    const channelPerformance = useMemo(
-        () => analyzeChannelPerformance(deliveredOrders, previousDeliveredOrders),
-        [deliveredOrders, previousDeliveredOrders]
-    );
-
-    const channelChartData = useMemo(
-        () => formatChannelForChart(channelPerformance),
-        [channelPerformance]
-    );
-
-    // ─── Temporal Analysis ─────────────────────────────────────────────
-
-    const temporalAnalysis = useMemo(
-        () => analyzeTemporalPatterns(deliveredOrders),
-        [deliveredOrders]
-    );
-
-    const timeBlockData = useMemo(
-        () => formatHoursByTimeBlock(temporalAnalysis.byHour),
-        [temporalAnalysis]
     );
 
     // ─── Alerts moved to Global Component ────────────────────────────
@@ -320,91 +271,6 @@ export const DashboardPage = () => {
                             </List.Item>
                         )}
                     />
-                </Card>
-            </Col>
-        </Row>
-    );
-
-    const channelTabContent = (
-        <Row gutter={[16, 16]}>
-            <Col xs={24}>
-                <Card title="Comparación de Canales" size="small">
-                    <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={channelChartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis yAxisId="left" />
-                            <YAxis yAxisId="right" orientation="right" />
-                            <Tooltip />
-                            <Legend />
-                            <Bar yAxisId="left" dataKey="pedidos" fill="#8884d8" name="Pedidos" />
-                            <Bar yAxisId="right" dataKey="revenue" fill="#82ca9d" name="Revenue ($)" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </Card>
-            </Col>
-            <Col xs={24}>
-                <Card title="Métricas Detalladas" size="small">
-                    <List
-                        dataSource={channelPerformance}
-                        renderItem={(channel: ChannelPerformance) => (
-                            <List.Item>
-                                <List.Item.Meta
-                                    title={channel.channelName}
-                                    description={
-                                        <>
-                                            <span>Pedidos: {channel.orders} • </span>
-                                            <span>Revenue: ${channel.revenue.toFixed(2)} • </span>
-                                            <span>Ticket Avg: ${channel.avgTicket.toFixed(2)}</span>
-                                        </>
-                                    }
-                                />
-                                <Tag color={channel.growth >= 0 ? 'green' : 'red'}>
-                                    {channel.growth >= 0 ? <RiseOutlined /> : <FallOutlined />}
-                                    {' '}{Math.abs(channel.growth).toFixed(1)}%
-                                </Tag>
-                            </List.Item>
-                        )}
-                    />
-                </Card>
-            </Col>
-        </Row>
-    );
-
-    const temporalTabContent = (
-        <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-                <Card title="Pedidos por Día de la Semana" size="small">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={temporalAnalysis.byDay}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="orders" fill="#1890ff" name="Pedidos" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                    <div style={{ marginTop: 16, textAlign: 'center' }}>
-                        <Typography.Text strong>Día Pico: </Typography.Text>
-                        <Tag color="blue">{temporalAnalysis.peakDay}</Tag>
-                    </div>
-                </Card>
-            </Col>
-            <Col xs={24} md={12}>
-                <Card title="Distribución por Horario" size="small">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={timeBlockData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="orders" fill="#82ca9d" name="Pedidos" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                    <div style={{ marginTop: 16, textAlign: 'center' }}>
-                        <Typography.Text strong>Hora Pico: </Typography.Text>
-                        <Tag color="green">{temporalAnalysis.peakHour}</Tag>
-                    </div>
                 </Card>
             </Col>
         </Row>
@@ -574,42 +440,10 @@ export const DashboardPage = () => {
                 )}
             </Card>
 
-            {/* Advanced Insights Tabs */}
+            {/* Análisis de Comportamiento RFM */}
             <Divider />
-            <Card title="📊 Análisis Avanzado" size="small" style={{ marginBottom: 16 }}>
-                <Tabs
-                    defaultActiveKey="rfm"
-                    size={isMobile ? "small" : "middle"}
-                    items={[
-                        {
-                            key: 'rfm',
-                            label: (
-                                <span>
-                                    <TrophyOutlined /> {!isMobile && 'RFM Analysis'}
-                                </span>
-                            ),
-                            children: rfmTabContent,
-                        },
-                        {
-                            key: 'channels',
-                            label: (
-                                <span>
-                                    <LineChartOutlined /> {!isMobile && 'Canales'}
-                                </span>
-                            ),
-                            children: channelTabContent,
-                        },
-                        {
-                            key: 'temporal',
-                            label: (
-                                <span>
-                                    <ClockCircleOutlined /> {!isMobile && 'Patrones Temporales'}
-                                </span>
-                            ),
-                            children: temporalTabContent,
-                        },
-                    ]}
-                />
+            <Card title="📊 Análisis de Comportamiento (RFM)" size="small" style={{ marginBottom: 16 }}>
+                {rfmTabContent}
             </Card>
 
             {/* Inactive customers modal */}

@@ -37,7 +37,7 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
             if (initialValues) {
                 form.setFieldsValue(initialValues);
             } else {
-                form.setFieldsValue({ isActive: true, type: 'B2C', mainContactMethod: 'WhatsApp', loyaltyPoints: 0 });
+                form.setFieldsValue({ isActive: true, type: 'B2C', mainContactMethod: 'WhatsApp' });
             }
         }
     }, [open, initialValues, form]);
@@ -70,11 +70,6 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                 </Col>
             </Row>
             <Row gutter={16}>
-                <Col span={12}>
-                    <Form.Item name="loyaltyPoints" label="Puntos Lealtad (Bambinos)">
-                        <InputNumber style={{ width: '100%' }} disabled />
-                    </Form.Item>
-                </Col>
                 <Col span={12}>
                     <Form.Item name="mainContactMethod" label="Medio de contacto principal" rules={[{ required: true }]}>
                         <Select>
@@ -235,17 +230,13 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                             <div style={{ padding: '16px 0' }}>
                                 <Card size="small" style={{ marginBottom: 24, borderRadius: 12, border: 'none', background: '#fcfcfc', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                                     <Row gutter={16} align="middle">
-                                        <Col span={8} style={{ textAlign: 'center' }}>
+                                        <Col span={12} style={{ textAlign: 'center' }}>
                                             <div style={{ fontSize: 12, color: 'gray' }}>Pedidos</div>
                                             <div style={{ fontSize: 20, fontWeight: 'bold' }}>{customerOrders.length}</div>
                                         </Col>
-                                        <Col span={8} style={{ textAlign: 'center', borderLeft: '1px solid #f0f0f0', borderRight: '1px solid #f0f0f0' }}>
+                                        <Col span={12} style={{ textAlign: 'center', borderLeft: '1px solid #f0f0f0' }}>
                                             <div style={{ fontSize: 12, color: 'gray' }}>Ticket Histórico</div>
                                             <div style={{ fontSize: 20, fontWeight: 'bold' }}>${customerOrders.reduce((sum, o) => sum + (o.total || 0), 0).toFixed(2)}</div>
-                                        </Col>
-                                        <Col span={8} style={{ textAlign: 'center' }}>
-                                            <div style={{ fontSize: 12, color: 'gray' }}>Puntos Lealtad</div>
-                                            <div style={{ fontSize: 20, fontWeight: 'bold', color: '#d4a373' }}>{initialValues.loyaltyPoints || 0}</div>
                                         </Col>
                                     </Row>
                                 </Card>

@@ -11,14 +11,12 @@ import {
     LogoutOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
-    TrophyOutlined,
     MoreOutlined,
     SunOutlined,
     MoonOutlined,
     PlusOutlined,
     BookOutlined,
     SendOutlined,
-    CompassOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthGate';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -42,20 +40,16 @@ export const AppLayout = () => {
         token: { colorBgContainer, borderRadiusLG, colorBorderSecondary, colorPrimary },
     } = theme.useToken();
 
-    const allMenuItems = [
+    const menuItems = [
         { key: '/', icon: <AppstoreOutlined />, label: 'Dashboard' },
-        { key: '/roadmap', icon: <CompassOutlined />, label: 'Roadmap' },
         { key: '/customers', icon: <UserOutlined />, label: 'Clientes' },
         { key: '/orders', icon: <ShoppingOutlined />, label: 'Pedidos' },
         { key: '/b2b-deliveries', icon: <SendOutlined />, label: 'Entregas B2B' },
-        { key: '/loyalty', icon: <TrophyOutlined />, label: 'Lealtad' },
         { key: '/inventory', icon: <InboxOutlined />, label: 'Inventario' },
         { key: '/recetario', icon: <BookOutlined />, label: 'Recetario' },
         { key: '/reports', icon: <BarChartOutlined />, label: 'Reportes' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Configuración' },
     ];
-
-    const menuItems = allMenuItems.filter(item => isMobile ? item.key !== '/roadmap' : true);
 
     const mobileTabItems = [
         menuItems.find(i => i.key === '/'), // Dashboard

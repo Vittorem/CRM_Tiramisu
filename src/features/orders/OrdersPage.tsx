@@ -1,16 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Button, Segmented, message, DatePicker, Modal, Skeleton, Space } from 'antd';
+import { Button, Segmented, message, DatePicker, Skeleton, Space } from 'antd';
 import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
-import { Order, OrderStatus, Customer, SystemSettings, B2BDeliverySchedule } from '../../types';
+import { Order, OrderStatus, B2BDeliverySchedule } from '../../types';
 import { OrderForm } from './components/OrderForm';
 import { OrderKanbanBoard } from './components/OrderKanbanBoard';
 import { OrderSummary } from './components/OrderSummary';
 import { OrderList } from './OrderList';
 import { getOrderDate } from '../../utils/dateHelpers';
 import dayjs from 'dayjs';
-import { increment } from 'firebase/firestore';
-import { calculateProductPoints, LOYALTY_RULES, getPointsCostForProduct, getLoyaltyRewardSummary } from '../../utils/loyalty';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useLocation } from 'react-router-dom';
 import { getPendingB2BAlerts } from '../../utils/b2bAlerts';
@@ -19,11 +17,7 @@ import { arrayUnion } from 'firebase/firestore';
 
 export const OrdersPage = () => {
     const { data: orders, loading: loadingOrders } = useFirestoreSubscription<Order>('orders');
-    const { data: customers, loading: loadingCustomers } = useFirestoreSubscription<Customer>('customers');
     const { add, update, softDelete } = useFirestoreMutation('orders');
-    const { update: updateCustomer } = useFirestoreMutation('customers');
-    const { add: addLoyalty } = useFirestoreMutation('loyalty_ledger');
-    const { data: settings } = useFirestoreSubscription<SystemSettings>('settings');
     const { data: b2bSchedules } = useFirestoreSubscription<B2BDeliverySchedule>('b2b_schedules');
     const { update: updateSchedule } = useFirestoreMutation<B2BDeliverySchedule>('b2b_schedules');
 
@@ -55,8 +49,7 @@ export const OrdersPage = () => {
         return getPendingB2BAlerts(b2bSchedules, orders);
     }, [b2bSchedules, orders]);
 
-    const loyaltySettings = settings[0];
-    const isLoyaltyEnabled = loyaltySettings ? loyaltySettings.loyaltyEnabled : true;
+
 
     const handleCreate = (customerId?: string) => {
         setEditingOrder(null);
@@ -89,80 +82,6 @@ export const OrdersPage = () => {
             const payload: Record<string, unknown> = { status: newStatus };
             if (newStatus === 'Entregado') {
                 payload.deliveredAt = new Date();
-
-                // Loyalty Points Logic
-                if (isLoyaltyEnabled && !order.pointsAwarded && order.customerId) {
-                    let pointsEarned = 0;
-                    const pointsRedeemed = order.pointsRedeemed || 0;
-
-                    if (order.items && order.items.length > 0) {
-                        order.items.forEach(item => {
-                            const pCost = getPointsCostForProduct(item.productNameAtSale || '');
-                            const itemRedeemed = item.pointsRedeemed || 0;
-                            const qtyRedeemed = pCost > 0 ? Math.round(itemRedeemed / pCost) : 0;
-                            const paidQty = Math.max(0, (item.quantity || 1) - qtyRedeemed);
-                            pointsEarned += calculateProductPoints(item.productNameAtSale || '', paidQty);
-                        });
-                    } else {
-                        const pointsCost = getPointsCostForProduct(order.productNameAtSale || '');
-                        const quantityRedeemed = pointsCost > 0 ? Math.round((order.pointsRedeemed || 0) / pointsCost) : 0;
-                        const paidQuantity = Math.max(0, (order.quantity || 1) - quantityRedeemed);
-                        pointsEarned += calculateProductPoints(order.productNameAtSale || '', paidQuantity);
-                    }
-
-                    const pointsChange = pointsEarned - pointsRedeemed;
-
-                    if (pointsChange !== 0 || pointsEarned > 0 || pointsRedeemed > 0) {
-                        payload.pointsEarned = pointsEarned;
-                        payload.pointsAwarded = true;
-
-                        await updateCustomer(order.customerId, {
-                            loyaltyPoints: increment(pointsChange)
-                        });
-
-                        if (pointsEarned > 0) {
-                            await addLoyalty({
-                                customerId: order.customerId,
-                                orderId: order.id,
-                                pointsChange: pointsEarned,
-                                reason: 'purchase'
-                            });
-                        }
-
-                        if (pointsRedeemed > 0) {
-                            await addLoyalty({
-                                customerId: order.customerId,
-                                orderId: order.id,
-                                pointsChange: -pointsRedeemed,
-                                reason: 'redemption'
-                            });
-                        }
-
-                        const currentCustomer = customers.find(c => c.id === order.customerId);
-                        const newPoints = (currentCustomer?.loyaltyPoints || 0) + pointsChange;
-                        if (newPoints >= LOYALTY_RULES.POINTS_FOR_FREE_BAMBINO) {
-                            const rewardText = getLoyaltyRewardSummary(newPoints);
-
-                            Modal.confirm({
-                                title: '¡Promoción de Lealtad!',
-                                content: `El cliente ${currentCustomer?.fullName || ''} ahora tiene ${newPoints} puntos, suficientes para ${rewardText} gratis. ¿Enviar aviso por WhatsApp?`,
-                                okText: 'Enviar WhatsApp',
-                                cancelText: 'Cancelar',
-                                onOk: () => {
-                                    if (currentCustomer?.phone) {
-                                        const phoneStr = currentCustomer.phone.replace(/\D/g, '');
-                                        const firstName = currentCustomer.fullName.split(' ')[0] || currentCustomer.fullName;
-                                        const msg = `Hola ${firstName}, gracias por comprar en King Candy La Casa Del Tiramisu, tu compra acumulo ${pointsChange} puntos de lealtad, ahora tienes ${newPoints} puntos acumulados. Comunicate con nosotros para saber como redimirlos.`;
-                                        const url = `https://wa.me/52${phoneStr}?text=${encodeURIComponent(msg)}`;
-                                        window.open(url, '_blank', 'noopener,noreferrer');
-                                    } else {
-                                        message.warning('El cliente no tiene teléfono registrado.');
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
             }
             await update(orderId, payload);
             message.success(`Estado actualizado a ${newStatus}`);
@@ -308,7 +227,7 @@ export const OrdersPage = () => {
 
 
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                {loadingOrders || loadingCustomers ? (
+                {loadingOrders ? (
                     <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 8 }} /></div>
                 ) : viewMode === 'Kanban' && !isMobile ? (
                 <OrderKanbanBoard

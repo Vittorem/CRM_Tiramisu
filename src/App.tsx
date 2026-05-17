@@ -11,12 +11,10 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { CustomerList } from './features/customers/CustomerList';
 import { OrdersPage } from './features/orders/OrdersPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
-import { LoyaltyDashboardPage } from './features/loyalty/LoyaltyDashboardPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { RecetarioPage } from './features/recetario/RecetarioPage';
 import { B2BDeliveriesPage } from './features/b2b-deliveries/B2BDeliveriesPage';
-import { RoadmapPage } from './features/roadmap/RoadmapPage';
 
 const queryClient = new QueryClient();
 
@@ -88,11 +86,9 @@ function App() {
                                         <Route path="customers" element={<CustomerList />} />
                                         <Route path="orders" element={<OrdersPage />} />
                                         <Route path="b2b-deliveries" element={<B2BDeliveriesPage />} />
-                                        <Route path="loyalty" element={<LoyaltyDashboardPage />} />
                                         <Route path="reports" element={<ReportsPage />} />
                                         <Route path="inventory" element={<InventoryPage />} />
                                         <Route path="recetario" element={<RecetarioPage />} />
-                                        <Route path="roadmap" element={<RoadmapPage />} />
                                         <Route path="settings" element={<SettingsPage />} />
                                         <Route path="*" element={<Navigate to="/" replace />} />
                                     </Route>
