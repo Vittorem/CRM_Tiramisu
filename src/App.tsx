@@ -26,14 +26,14 @@ export const useTheme = () => useContext(ThemeContext);
 
 function App() {
     const [isDarkMode, setIsDarkMode] = useState(() => {
-        const saved = localStorage.getItem('tiramisu_theme');
+        const saved = localStorage.getItem('crm_theme');
         return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
     const toggleDarkMode = () => {
         const nextMode = !isDarkMode;
         setIsDarkMode(nextMode);
-        localStorage.setItem('tiramisu_theme', nextMode ? 'dark' : 'light');
+        localStorage.setItem('crm_theme', nextMode ? 'dark' : 'light');
     };
 
     useEffect(() => {
@@ -55,7 +55,7 @@ function App() {
                 theme={{
                     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
                     token: {
-                        colorPrimary: '#d4a373', // Caramel/Warm primary color for Tiramisu
+                        colorPrimary: '#d4a373', // Warm caramel – brand-neutral pastry palette
                         colorInfo: '#d4a373',
                         borderRadius: 12, // Softer curves for premium feel
                         fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',

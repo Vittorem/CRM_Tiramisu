@@ -10,9 +10,9 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
             manifest: {
-                name: 'Tiramisú CRM',
-                short_name: 'Tiramisú',
-                description: 'Sistema CRM para Tiramisú',
+                name: 'CRM Repostería',
+                short_name: 'CRM',
+                description: 'Sistema CRM para negocios de repostería',
                 theme_color: '#ffffff',
                 background_color: '#ffffff',
                 display: 'standalone',

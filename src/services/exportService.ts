@@ -42,7 +42,7 @@ export function exportOrdersExcel(orders: Order[], customers: Customer[], recipe
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, wsOrders, 'Pedidos');
     XLSX.utils.book_append_sheet(wb, wsClients, 'Clientes');
-    XLSX.writeFile(wb, `Reporte_Tiramisu_${dayjs().format('YYYYMMDD')}.xlsx`);
+    XLSX.writeFile(wb, `Reporte_Reposteria_${dayjs().format('YYYYMMDD')}.xlsx`);
 }
 
 // ─── PDF Export (Corte de Caja) ───────────────────────────────────────────────
@@ -131,7 +131,7 @@ export function exportCustomersXML(customers: Customer[]) {
     });
 
     xmlContent += '</clientes>';
-    downloadBlob(xmlContent, 'application/xml', `Clientes_Tiramisu_${dayjs().format('YYYYMMDD')}.xml`);
+    downloadBlob(xmlContent, 'application/xml', `Clientes_Reposteria_${dayjs().format('YYYYMMDD')}.xml`);
 }
 
 // ─── Demographics Exports ─────────────────────────────────────────────────────

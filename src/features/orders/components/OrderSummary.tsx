@@ -24,7 +24,7 @@ export const OrderSummary = ({ orders }: OrderSummaryProps) => {
         bySize: pendingPrep.reduce((acc, order) => {
             const processItem = (name: string, qty: number) => {
                 const n = name.toLowerCase();
-                if (n.includes('bambino')) acc.chico += qty;
+                if (n.includes('chico') || n.includes('pequeño') || n.includes('bambino')) acc.chico += qty;
                 else if (n.includes('mediano')) acc.mediano += qty;
                 else if (n.includes('grande')) acc.grande += qty;
                 else acc.otro += qty;

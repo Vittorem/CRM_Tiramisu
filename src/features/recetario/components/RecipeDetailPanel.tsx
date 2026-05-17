@@ -92,7 +92,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
             head: [['Artículo/Concepto', 'Porciones', 'Precio Unitario', 'Importe']],
             body: tableData,
             theme: 'striped',
-            headStyles: { fillColor: [212, 163, 115] } // Tiramisu Primary Color
+            headStyles: { fillColor: [212, 163, 115] } // Brand primary color (warm caramel)
         });
 
         // Summary

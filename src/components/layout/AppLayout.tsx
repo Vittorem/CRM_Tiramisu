@@ -92,7 +92,7 @@ export const AppLayout = () => {
                     }}
                 >
                     <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: collapsed ? 10 : 14 }}>
-                        {collapsed ? 'CRM' : 'TIRAMISÚ'}
+                        {collapsed ? 'CRM' : 'REPOSTERÍA'}
                     </div>
                     <Menu
                         theme="dark"
@@ -122,7 +122,7 @@ export const AppLayout = () => {
                     zIndex: 10 
                 }}>
                     {isMobile ? (
-                        <div style={{ fontWeight: 800, fontSize: 18, color: colorPrimary }}>TIRAMISÚ CRM</div>
+                        <div style={{ fontWeight: 800, fontSize: 18, color: colorPrimary }}>CRM Repostería</div>
                     ) : (
                         <Button
                             type="text"
