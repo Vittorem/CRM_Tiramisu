@@ -38,13 +38,13 @@ function App() {
 
     useEffect(() => {
         if (isDarkMode) {
-            document.documentElement.style.setProperty('--color-cream', '#141414');
-            document.documentElement.style.setProperty('--color-espresso', '#e6e6e6');
-            document.body.style.backgroundColor = '#141414';
+            document.documentElement.style.setProperty('--color-cream', '#1a0f12');
+            document.documentElement.style.setProperty('--color-espresso', '#f3e8eb');
+            document.body.style.backgroundColor = '#1a0f12';
         } else {
-            document.documentElement.style.setProperty('--color-cream', '#fffbf5');
-            document.documentElement.style.setProperty('--color-espresso', '#4a3b32');
-            document.body.style.backgroundColor = '#fffbf5';
+            document.documentElement.style.setProperty('--color-cream', '#fff5f6');
+            document.documentElement.style.setProperty('--color-espresso', '#3f2b2f');
+            document.body.style.backgroundColor = '#fff5f6';
         }
     }, [isDarkMode]);
 
@@ -55,23 +55,23 @@ function App() {
                 theme={{
                     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
                     token: {
-                        colorPrimary: '#d4a373', // Warm caramel – brand-neutral pastry palette
-                        colorInfo: '#d4a373',
+                        colorPrimary: '#db2777', // Vibrant Wildberry Rose - elegant general pastry palette
+                        colorInfo: '#db2777',
                         borderRadius: 12, // Softer curves for premium feel
                         fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
                         controlHeight: 40,
                         controlHeightLG: 48,
                         fontSize: 14, // Standard CRM font size for better density
                         boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)', // Soft diffuse shadows
-                        colorBgBase: isDarkMode ? '#141414' : '#fffbf5', // Cream default for light, dark gray for dark
+                        colorBgBase: isDarkMode ? '#1a0f12' : '#fff5f6', // Sweet vanilla light cream / elegant plum dark
                     },
                     components: {
                         Card: {
-                            colorBgContainer: isDarkMode ? '#1f1f1f' : '#ffffff',
+                            colorBgContainer: isDarkMode ? '#26161a' : '#ffffff',
                         },
                         Layout: {
-                            bodyBg: isDarkMode ? '#141414' : '#fffbf5',
-                            headerBg: isDarkMode ? '#1f1f1f' : '#ffffff',
+                            bodyBg: isDarkMode ? '#1a0f12' : '#fff5f6',
+                            headerBg: isDarkMode ? '#26161a' : '#ffffff',
                         }
                     }
                 }}

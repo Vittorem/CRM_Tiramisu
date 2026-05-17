@@ -183,7 +183,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
                         <div className="w-px bg-orange-200/50 dark:bg-orange-800/50 my-1"></div>
                         <div>
                             <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Costo / Porción</div>
-                            <div className="text-3xl font-black text-[#bc6c25] dark:text-[#d4a373] leading-none">
+                            <div className="text-3xl font-black text-[#be185d] dark:text-[#db2777] leading-none">
                                 ${costPerServing.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                         </div>
@@ -232,7 +232,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
                         )}
                         
                         <div className="flex gap-2 w-full mt-2 lg:mt-0">
-                            <Button type="primary" icon={<FilePdfOutlined />} onClick={generatePDF} className="bg-[#bc6c25] hover:bg-[#a95c1e] border-none shadow-sm flex-1">
+                            <Button type="primary" icon={<FilePdfOutlined />} onClick={generatePDF} className="bg-[#be185d] hover:bg-[#9d174d] border-none shadow-sm flex-1">
                                 Generar Cotización PDF
                             </Button>
                             <Button icon={<DownloadOutlined />} onClick={handleExportJSON} className="flex-none">

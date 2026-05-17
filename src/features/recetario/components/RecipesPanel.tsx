@@ -221,8 +221,8 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                                 onClick={() => onSelectRecipe(recipe)}
                                 className={`p-3 bg-white dark:bg-[#1f1f1f] rounded-lg transition-all cursor-pointer relative group border-2
                                     ${isSelected 
-                                        ? 'border-[#d4a373] shadow-md bg-orange-50/30 dark:bg-[#d4a373]/10 transform scale-[1.01]' 
-                                        : 'border-gray-100 dark:border-gray-800 hover:border-[#d4a373]/50 hover:shadow-sm'
+                                        ? 'border-[#db2777] shadow-md bg-pink-50/30 dark:bg-[#db2777]/10 transform scale-[1.01]' 
+                                        : 'border-gray-100 dark:border-gray-800 hover:border-[#db2777]/50 hover:shadow-sm'
                                     }
                                 `}
                             >
@@ -243,7 +243,7 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Porción</span>
-                                        <span className="font-bold text-[#bc6c25] text-sm">${costPerServing.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="font-bold text-[#be185d] text-sm">${costPerServing.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
 

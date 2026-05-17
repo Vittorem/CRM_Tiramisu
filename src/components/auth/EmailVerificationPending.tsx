@@ -68,7 +68,7 @@ export const EmailVerificationPending = ({ email }: EmailVerificationPendingProp
     };
 
     return (
-        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fffbf5 0%, #f5e6d3 100%)' }}>
+        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f6 0%, #ffd1dc 100%)' }}>
             <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                 <Card
                     style={{
@@ -80,8 +80,8 @@ export const EmailVerificationPending = ({ email }: EmailVerificationPendingProp
                     }}
                 >
                     <div style={{ marginBottom: 24 }}>
-                        <MailOutlined style={{ fontSize: 48, color: '#d4a373', marginBottom: 16 }} />
-                        <Title level={3} style={{ marginBottom: 8, color: '#4a3b32' }}>
+                        <MailOutlined style={{ fontSize: 48, color: '#db2777', marginBottom: 16 }} />
+                        <Title level={3} style={{ marginBottom: 8, color: '#3f2b2f' }}>
                             Verifica tu correo
                         </Title>
                         <Text type="secondary">
