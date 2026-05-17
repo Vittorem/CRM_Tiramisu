@@ -53,7 +53,6 @@ function SortableItem({ order, onClick }: { order: Order; onClick: () => void })
                         order.items.map((item, i) => (
                             <div key={item.id || i}>
                                 {item.quantity}x {item.productNameAtSale} ({item.flavorNameAtSale})
-                                {item.pointsRedeemed ? ' 🎁' : ''}
                             </div>
                         ))
                     ) : (

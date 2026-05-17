@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Alert, Checkbox, Grid, TimePicker } from 'antd';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
-import { getPointsCostForProduct } from '../../../utils/loyalty';
 import dayjs from 'dayjs';
 
 interface OrderFormProps {
@@ -31,24 +30,8 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const { data: products } = useFirestoreSubscription<Product>('catalog_products');
     const { data: flavors } = useFirestoreSubscription<Flavor>('catalog_flavors');
     const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
-    const { data: orders } = useFirestoreSubscription<Order>('orders');
-    const isLoyaltyEnabled = false;
-
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
-    const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
-    const [loyaltyError, setLoyaltyError] = useState<string | null>(null);
-
-    const currentCustomer = customers.find(c => c.id === form.getFieldValue('customerId'));
-    const availablePointsRaw = currentCustomer?.loyaltyPoints || 0;
-
-    // Calculate frozen points from other pending orders
-    const orderId = initialValues?.id || null;
-    const pendingRedemptions = orders
-        .filter(o => o.customerId === currentCustomer?.id && !['Entregado', 'Cancelado'].includes(o.status) && o.id !== orderId)
-        .reduce((acc, o) => acc + (o.pointsRedeemed || 0), 0);
-
-    const effectiveAvailablePoints = Math.max(0, availablePointsRaw - pendingRedemptions);
 
     useEffect(() => {
         if (open) {
@@ -69,9 +52,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                         flavorNameAtSale: initialValues.flavorNameAtSale || '',
                         quantity: initialValues.quantity || 1,
                         unitPriceAtSale: initialValues.unitPriceAtSale || 0,
-                        subtotal: (initialValues.quantity || 1) * (initialValues.unitPriceAtSale || 0),
-                        pointsRedeemed: initialValues.pointsRedeemed || 0,
-                        redeemLoyalty: (initialValues.pointsRedeemed || 0) > 0
+                        subtotal: (initialValues.quantity || 1) * (initialValues.unitPriceAtSale || 0)
                     } as any];
                 }
 
@@ -86,7 +67,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 form.setFieldsValue({
                     status: 'Pendiente',
                     paymentStatus: 'No Pagado',
-                    items: [{ quantity: 1, unitPriceAtSale: 0, redeemLoyalty: false }],
+                    items: [{ quantity: 1, unitPriceAtSale: 0 }],
                     shippingCost: 0,
                     discountValue: 0,
                     extraCharges: 0,
@@ -123,65 +104,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             ? (subtotal * discountVal) / 100
             : discountVal;
 
-        // Apply loyalty redemptions per item checkboxes
-        let pLoyaltyDiscount = 0;
-        let pointsUsedPool = 0;
-        let totalRedeemedQty = 0;
-        let pointsLeft = effectiveAvailablePoints;
-        let pLoyaltyError = null;
-
-        const maxAllowedFreeUnits = totalQty - 1;
-
-        items.forEach((item: any) => {
-            const qty = (item?.quantity as number) || 0;
-            const price = (item?.unitPriceAtSale as number) || 0;
-            const pId = item?.productId;
-            const wantsRedeem = item?.redeemLoyalty;
-
-            item._calculatedRedeemedQty = 0;
-            item._calculatedPointsUsed = 0;
-
-            if (isLoyaltyEnabled && wantsRedeem && pId) {
-                const prod = products.find(p => p.id === pId);
-                const pName = prod?.name || '';
-                const pCost = getPointsCostForProduct(pName);
-
-                if (pCost > 0) {
-                    const affordableFree = Math.floor(pointsLeft / pCost);
-                    const remainingFreeAllowed = Math.max(0, maxAllowedFreeUnits - totalRedeemedQty);
-                    const maxFree = Math.min(qty, affordableFree, remainingFreeAllowed);
-
-                    if (maxFree > 0) {
-                        pLoyaltyDiscount += (maxFree * price);
-                        pointsUsedPool += (maxFree * pCost);
-                        totalRedeemedQty += maxFree;
-                        pointsLeft -= (maxFree * pCost);
-
-                        item._calculatedRedeemedQty = maxFree;
-                        item._calculatedPointsUsed = maxFree * pCost;
-                    }
-
-                    if (maxFree === 0) {
-                        pLoyaltyError = 'Se alcanzó el límite (faltan puntos o productos pagados) para algunas de tus selecciones.';
-                    }
-                } else {
-                    pLoyaltyError = 'Seleccionaste redimir un producto que no es elegible.';
-                }
-            }
-        });
-
-        if (pLoyaltyError) {
-            pLoyaltyDiscount = 0;
-            pointsUsedPool = 0;
-            items.forEach((item: any) => {
-                item._calculatedPointsUsed = 0;
-                item._calculatedRedeemedQty = 0;
-            });
-        }
-
-        const total = subtotal + shipping + extra - discountAmount - pLoyaltyDiscount;
-        setLoyaltyDiscount(pLoyaltyDiscount);
-        setLoyaltyError(pLoyaltyError);
+        const total = subtotal + shipping + extra - discountAmount;
         setTotals({ subtotal, discount: discountAmount, total, qty: totalQty });
     };
 
@@ -209,16 +132,12 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             const customer = customers.find(c => c.id === values.customerId);
 
             const items = values.items || [];
-            let totalPointsRedeemed = 0;
 
             const structuredItems: OrderItem[] = items.map((item: any, i: number) => {
                 const pId = item.productId;
                 const fId = item.flavorId;
                 const prod = products.find(p => p.id === pId);
                 const flav = flavors.find(f => f.id === fId);
-
-                const usesPoints = item._calculatedPointsUsed || 0;
-                totalPointsRedeemed += usesPoints;
 
                 return {
                     id: Date.now().toString() + i,
@@ -228,9 +147,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     flavorNameAtSale: flav?.name || item.flavorNameAtSale || 'Desconocido',
                     quantity: item.quantity || 1,
                     unitPriceAtSale: item.unitPriceAtSale || 0,
-                    subtotal: (item.quantity || 1) * (item.unitPriceAtSale || 0),
-                    pointsRedeemed: usesPoints,
-                    redeemLoyalty: (item._calculatedPointsUsed || 0) > 0 // Help populate UI checkboxes if editing later
+                    subtotal: (item.quantity || 1) * (item.unitPriceAtSale || 0)
                 };
             });
 
@@ -249,7 +166,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 flavorNameAtSale: structuredItems[0]?.flavorNameAtSale || '',
                 quantity: structuredItems.reduce((acc, curr) => acc + curr.quantity, 0),
                 unitPriceAtSale: structuredItems[0]?.unitPriceAtSale || 0,
-                pointsRedeemed: totalPointsRedeemed,
                 subtotal: totals.subtotal,
                 discountAmount: totals.discount,
                 total: totals.total,
@@ -274,7 +190,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 !isMobile && (
                     <Space>
                         <Button onClick={onClose}>Cancelar</Button>
-                        <Button type="primary" onClick={handleFinish} loading={loading} disabled={!!loyaltyError}>Guardar</Button>
+                        <Button type="primary" onClick={handleFinish} loading={loading}>Guardar</Button>
                     </Space>
                 )
             }
@@ -284,7 +200,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                         <Button onClick={onClose} style={{ flex: 1 }} size="large">
                             Cancelar
                         </Button>
-                        <Button type="primary" onClick={handleFinish} loading={loading} disabled={!!loyaltyError} style={{ flex: 1 }} size="large">
+                        <Button type="primary" onClick={handleFinish} loading={loading} style={{ flex: 1 }} size="large">
                             Guardar
                         </Button>
                     </div>
@@ -312,23 +228,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                         </Form.Item>
                     </Col>
                 </Row>
-
-                {isLoyaltyEnabled && currentCustomer && availablePointsRaw > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                        <Alert
-                            message={`Puntos de Lealtad (Total: ${availablePointsRaw})`}
-                            description={
-                                <div>
-                                    {pendingRedemptions > 0 && <div style={{ marginBottom: 4 }}>Puntos comprometidos en pedidos pendientes: <strong style={{ color: 'red' }}>{pendingRedemptions}</strong></div>}
-                                    <div style={{ marginBottom: 4 }}>Puntos completamente libres (Efectivos): <strong>{effectiveAvailablePoints}</strong></div>
-                                    {loyaltyError && <div style={{ color: 'red', marginTop: 8, fontWeight: 'bold' }}>{loyaltyError}</div>}
-                                </div>
-                            }
-                            type={loyaltyError ? "error" : "info"}
-                            showIcon
-                        />
-                    </div>
-                )}
 
                 <Divider orientation="left">Carrito de Productos</Divider>
 
@@ -371,32 +270,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                                             </Form.Item>
                                         </Col>
                                         <Col xs={24} md={8}>
-                                            {(() => {
-                                                if (!isLoyaltyEnabled) return null;
-                                                const pId = form.getFieldValue(['items', name, 'productId']);
-                                                if (!pId || !currentCustomer) return null;
-
-                                                const pName = products.find(p => p.id === pId)?.name || '';
-                                                const pCost = getPointsCostForProduct(pName);
-
-                                                if (pCost > 0) {
-                                                    if (effectiveAvailablePoints >= pCost) {
-                                                        return (
-                                                            <div style={{ marginTop: 32 }}>
-                                                                <Form.Item {...restField} name={[name, 'redeemLoyalty']} valuePropName="checked" style={{ margin: 0 }}>
-                                                                    <Checkbox>Redimir grátis ({pCost} pts)</Checkbox>
-                                                                </Form.Item>
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        return <div style={{ marginTop: 32 }}><Text type="secondary" style={{ fontSize: 13 }}>Requiere {pCost} pts</Text></div>;
-                                                    }
-                                                }
-
-                                                return null;
-                                            })()}
-                                        </Col>
-                                        <Col xs={24} md={8}>
                                             {fields.length > 1 && (
                                                 <div style={{ textAlign: 'right', marginTop: 32 }}>
                                                     <Button danger type="text" icon={<DeleteOutlined />} onClick={() => remove(name)}>
@@ -409,7 +282,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                                 </div>
                             ))}
                             <Form.Item>
-                                <Button type="dashed" onClick={() => add({ quantity: 1, unitPriceAtSale: 0, redeemLoyalty: false })} block icon={<PlusOutlined />}>
+                                <Button type="dashed" onClick={() => add({ quantity: 1, unitPriceAtSale: 0 })} block icon={<PlusOutlined />}>
                                     Añadir otro producto al carrito
                                 </Button>
                             </Form.Item>
@@ -472,7 +345,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     <Col xs={24} md={8}>
                         <div style={{ padding: '30px 0', color: 'red' }}>
                             Descuento Final: -${totals.discount.toFixed(2)}
-                            {loyaltyDiscount > 0 && <span style={{ display: 'block' }}>Lealtad: -${loyaltyDiscount.toFixed(2)}</span>}
                         </div>
                     </Col>
                 </Row>
