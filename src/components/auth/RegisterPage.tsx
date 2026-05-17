@@ -72,7 +72,7 @@ export const RegisterPage = ({ onGoLogin }: RegisterPageProps) => {
     };
 
     return (
-        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fffbf5 0%, #f5e6d3 100%)' }}>
+        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f6 0%, #ffd1dc 100%)' }}>
             <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                 <Card
                     style={{
@@ -83,10 +83,10 @@ export const RegisterPage = ({ onGoLogin }: RegisterPageProps) => {
                     }}
                 >
                     <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <Title level={2} style={{ marginBottom: 4, color: '#4a3b32' }}>
+                        <Title level={2} style={{ marginBottom: 4, color: '#3f2b2f' }}>
                             Crear Cuenta
                         </Title>
-                        <Text type="secondary">Tiramisú CRM</Text>
+                        <Text type="secondary">Postres CRM</Text>
                     </div>
 
                     <Form

@@ -281,7 +281,7 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                     <Row gutter={16}>
                         <Col span={16}>
                             <Form.Item name="name" label="Nombre de la Receta" rules={[{ required: true, message: 'Requerido' }]}>
-                                <Input placeholder="Ej. Tiramisú Clásico" />
+                                <Input placeholder="Ej. Pastel de Tres Leches" />
                             </Form.Item>
                         </Col>
                         <Col span={8}>

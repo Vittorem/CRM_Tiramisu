@@ -18,7 +18,7 @@ export const RecetarioPage = () => {
             <div className="mb-6 flex justify-between items-start">
                 <div>
                     <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
-                        Recetario de Tiramisú
+                        Recetario de Postres
                     </Title>
                     <Text type="secondary" className="text-sm md:text-base">
                         Gestión de recetas, inventario y costos con Firebase.

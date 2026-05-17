@@ -37,7 +37,7 @@ export const LoginPage = ({ onGoRegister }: LoginPageProps) => {
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
             await signInWithPopup(auth, provider);
-            message.success('¡Bienvenido a Tiramisú CRM!');
+            message.success('¡Bienvenido a Postres CRM!');
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Error desconocido';
             console.error('Error de autenticación Google:', msg);
@@ -53,7 +53,7 @@ export const LoginPage = ({ onGoRegister }: LoginPageProps) => {
         try {
             setLoadingEmail(true);
             await signInWithEmailAndPassword(auth, values.email, values.password);
-            message.success('¡Bienvenido a Tiramisú CRM!');
+            message.success('¡Bienvenido a Postres CRM!');
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Error desconocido';
             console.error('Error de autenticación email:', msg);
@@ -148,7 +148,7 @@ export const LoginPage = ({ onGoRegister }: LoginPageProps) => {
     ];
 
     return (
-        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fffbf5 0%, #f5e6d3 100%)' }}>
+        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f6 0%, #ffd1dc 100%)' }}>
             <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                 <Card
                     style={{
@@ -160,8 +160,8 @@ export const LoginPage = ({ onGoRegister }: LoginPageProps) => {
                     }}
                 >
                     <div style={{ marginBottom: 24 }}>
-                        <Title level={2} style={{ marginBottom: 4, color: '#4a3b32' }}>
-                            Tiramisú CRM
+                        <Title level={2} style={{ marginBottom: 4, color: '#3f2b2f' }}>
+                            Postres CRM
                         </Title>
                         <Text type="secondary">Sistema de Gestión y Pedidos</Text>
                     </div>
