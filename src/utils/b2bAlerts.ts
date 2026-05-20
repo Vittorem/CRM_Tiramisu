@@ -50,10 +50,11 @@ function hasMatchingOrder(
         const orderDate = getOrderDate(order);
         if (!orderDate) return false;
         
-        // Ventana de ±2 días: si se crea el pedido un día antes (cuando sale la alerta) 
+        // Ventana de ±1 día: si se crea el pedido un día antes (cuando sale la alerta)
         // o un día después, se considera que corresponde a esta entrega.
+        // Esto evita solapamientos en clientes con entregas frecuentes (ej. Lunes y Miércoles).
         const diffDays = Math.abs(orderDate.startOf('day').diff(targetDate.startOf('day'), 'day'));
-        return diffDays <= 2;
+        return diffDays <= 1;
     });
 }
 
@@ -158,7 +159,7 @@ export function hasOrderForDayThisWeek(
         if (!orderDate) return false;
         
         const diffDays = Math.abs(orderDate.startOf('day').diff(targetDate.startOf('day'), 'day'));
-        return diffDays <= 2;
+        return diffDays <= 1;
     });
 }
 

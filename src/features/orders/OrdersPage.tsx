@@ -150,11 +150,15 @@ export const OrdersPage = () => {
                                 cancelText: 'Cancelar',
                                 onOk: () => {
                                     if (currentCustomer?.phone) {
-                                        const phoneStr = currentCustomer.phone.replace(/\D/g, '');
-                                        const firstName = currentCustomer.fullName.split(' ')[0] || currentCustomer.fullName;
-                                        const msg = `Hola ${firstName}, gracias por comprar en King Candy La Casa Del Tiramisu, tu compra acumulo ${pointsChange} puntos de lealtad, ahora tienes ${newPoints} puntos acumulados. Comunicate con nosotros para saber como redimirlos.`;
-                                        const url = `https://wa.me/52${phoneStr}?text=${encodeURIComponent(msg)}`;
-                                        window.open(url, '_blank', 'noopener,noreferrer');
+                                         let cleanPhone = currentCustomer.phone.replace(/\D/g, '');
+                                         if (cleanPhone.startsWith('044') || cleanPhone.startsWith('045')) {
+                                             cleanPhone = cleanPhone.substring(3);
+                                         }
+                                         const phoneWithCountry = (cleanPhone.startsWith('52') && cleanPhone.length > 10) ? cleanPhone : `52${cleanPhone}`;
+                                         const firstName = currentCustomer.fullName.split(' ')[0] || currentCustomer.fullName;
+                                         const msg = `Hola ${firstName}, gracias por comprar en King Candy La Casa Del Tiramisu, tu compra acumulo ${pointsChange} puntos de lealtad, ahora tienes ${newPoints} puntos acumulados. Comunicate con nosotros para saber como redimirlos.`;
+                                         const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`;
+                                         window.open(url, '_blank', 'noopener,noreferrer');
                                     } else {
                                         message.warning('El cliente no tiene teléfono registrado.');
                                     }

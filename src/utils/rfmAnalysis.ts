@@ -99,13 +99,24 @@ export function computeCustomerRFMScores(
 
     const getQuintile = (value: number, sortedArray: number[], reverse = false): number => {
         if (sortedArray.length === 0) return 1;
-        const index = sortedArray.findIndex(v => v >= value);
-        if (index === -1) return reverse ? 1 : 5;
-
-        const percentile = index / sortedArray.length;
-        let score = Math.ceil(percentile * 5);
-        if (reverse) score = 6 - score; // Invert for recency (lower days = higher score)
-        return Math.max(1, Math.min(5, score));
+        
+        if (reverse) {
+            // Recency: lower values are better (higher score).
+            // Use indexOf to give tied values the highest rank (most recent).
+            const index = sortedArray.indexOf(value);
+            if (index === -1) return 1;
+            const percentile = (index + 1) / sortedArray.length;
+            const score = 6 - Math.ceil(percentile * 5);
+            return Math.max(1, Math.min(5, score));
+        } else {
+            // Frequency and Monetary: higher values are better (higher score).
+            // Use lastIndexOf to give tied values the highest rank.
+            const index = sortedArray.lastIndexOf(value);
+            if (index === -1) return 5;
+            const percentile = (index + 1) / sortedArray.length;
+            const score = Math.ceil(percentile * 5);
+            return Math.max(1, Math.min(5, score));
+        }
     };
 
     // Assign scores and segments

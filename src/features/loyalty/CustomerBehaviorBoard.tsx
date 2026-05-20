@@ -101,8 +101,12 @@ export const CustomerBehaviorBoard = ({ customers, orders }: Props) => {
         if (customerObj) {
             const firstName = customerObj.fullName.split(' ')[0] || customerObj.fullName;
             const text = whatsappMessage.replace(/{{nombre}}/g, firstName);
-            const phone = customerObj.phone.replace(/\D/g, '');
-            const url = `https://wa.me/52${phone}?text=${encodeURIComponent(text)}`;
+            let cleanPhone = customerObj.phone.replace(/\D/g, '');
+            if (cleanPhone.startsWith('044') || cleanPhone.startsWith('045')) {
+                cleanPhone = cleanPhone.substring(3);
+            }
+            const phoneWithCountry = (cleanPhone.startsWith('52') && cleanPhone.length > 10) ? cleanPhone : `52${cleanPhone}`;
+            const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
         }
         setSendingIndex(prev => prev + 1);
