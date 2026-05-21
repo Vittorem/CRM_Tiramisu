@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Button, Modal, Form, Input, InputNumber, Select, Typography, Popconfirm, message, Table } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select, Typography, Popconfirm, message, Table, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../../hooks/useFirestore';
 import { Ingredient, Recipe } from '../../../types';
@@ -7,6 +7,7 @@ import { Ingredient, Recipe } from '../../../types';
 const { Title } = Typography;
 
 export const IngredientsPanel = () => {
+    const { token: { colorBgContainer, colorBorderSecondary, colorText, colorTextSecondary } } = theme.useToken();
     const { data: ingredients, loading } = useFirestoreSubscription<Ingredient>('ingredients');
     const { data: recipes } = useFirestoreSubscription<Recipe>('recipes'); // Need this to validate deletion
     const { add, update, softDelete } = useFirestoreMutation<Ingredient>('ingredients');
@@ -86,13 +87,13 @@ export const IngredientsPanel = () => {
             dataIndex: 'name',
             key: 'name',
             sorter: (a: Ingredient, b: Ingredient) => a.name.localeCompare(b.name),
-            render: (text: string) => <span className="font-semibold text-gray-800 dark:text-gray-200">{text}</span>
+            render: (text: string) => <span style={{ fontWeight: 600, color: colorText }}>{text}</span>
         },
         {
             title: 'Costo Unitario',
             key: 'cost',
             render: (_: any, record: Ingredient) => (
-                <span className="text-gray-600 dark:text-gray-400">
+                <span style={{ color: colorTextSecondary }}>
                     ${(record.cost_unit || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             )
@@ -101,7 +102,7 @@ export const IngredientsPanel = () => {
             title: 'Por',
             dataIndex: 'unit',
             key: 'unit',
-            render: (text: string) => <span className="text-gray-500 uppercase tracking-wider text-xs">{text}</span>
+            render: (text: string) => <span style={{ color: colorTextSecondary, textTransform: 'uppercase', fontSize: 12, letterSpacing: '0.05em' }}>{text}</span>
         },
         {
             title: '',
@@ -138,7 +139,7 @@ export const IngredientsPanel = () => {
     ];
 
     return (
-        <div className="bg-white dark:bg-[#1f1f1f] rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-800 h-full flex flex-col">
+        <div className="rounded-2xl p-4 md:p-6 shadow-sm border h-full flex flex-col" style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}>
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-6">
                 <Title level={5} style={{ margin: 0 }}>Catálogo de Insumos</Title>
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">

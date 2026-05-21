@@ -3,6 +3,7 @@ import { Button, Modal, Form, Input, InputNumber, Select, Typography, Spin, Popc
 import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, UploadOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../../hooks/useFirestore';
 import { Recipe, Ingredient, RecipeIngredient, Product, Flavor } from '../../../types';
+import { theme as antdTheme } from 'antd';
 
 const { Title } = Typography;
 
@@ -13,6 +14,7 @@ interface RecipesPanelProps {
 }
 
 export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelection }: RecipesPanelProps) => {
+    const { token: { colorBgContainer, colorBorderSecondary, colorText, colorTextSecondary, colorPrimary, colorBgElevated } } = antdTheme.useToken();
     const { data: recipes, loading: recipesLoading } = useFirestoreSubscription<Recipe>('recipes');
     const { data: ingredients, loading: ingredientsLoading } = useFirestoreSubscription<Ingredient>('ingredients');
     const { data: products } = useFirestoreSubscription<Product>('catalog_products');
@@ -172,7 +174,7 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
     const loading = recipesLoading || ingredientsLoading;
 
     return (
-        <div className="bg-white dark:bg-[#1f1f1f] rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-800 h-full flex flex-col">
+        <div className="rounded-2xl p-4 md:p-6 shadow-sm border h-full flex flex-col" style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}>
             <div className="flex flex-col gap-4 mb-6">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <Title level={5} style={{ margin: 0, whiteSpace: 'nowrap' }}>Recetas y Variantes</Title>
@@ -206,7 +208,7 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                         <Spin />
                     </div>
                 ) : filteredRecipes.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl">
+                    <div className="text-center py-8 border-2 border-dashed rounded-xl" style={{ color: colorTextSecondary, borderColor: colorBorderSecondary }}>
                         No hay recetas creadas aún.
                     </div>
                 ) : (
@@ -219,36 +221,39 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                             <div 
                                 key={recipe.id} 
                                 onClick={() => onSelectRecipe(recipe)}
-                                className={`p-3 bg-white dark:bg-[#1f1f1f] rounded-lg transition-all cursor-pointer relative group border-2
-                                    ${isSelected 
-                                        ? 'border-[#db2777] shadow-md bg-pink-50/30 dark:bg-[#db2777]/10 transform scale-[1.01]' 
-                                        : 'border-gray-100 dark:border-gray-800 hover:border-[#db2777]/50 hover:shadow-sm'
-                                    }
-                                `}
+                                className={`p-3 rounded-lg transition-all cursor-pointer relative group border-2 ${isSelected ? 'shadow-md transform scale-[1.01]' : 'hover:shadow-sm'}`}
+                                style={{
+                                    background: isSelected ? `${colorPrimary}15` : colorBgContainer,
+                                    borderColor: isSelected ? colorPrimary : colorBorderSecondary
+                                }}
                             >
                                 <div className="flex justify-between items-start mb-1">
-                                    <div className="font-semibold text-gray-800 dark:text-gray-200 text-base flex items-center gap-2">
+                                    <div className="font-semibold text-base flex items-center gap-2" style={{ color: colorText }}>
                                         {recipe.name}
                                         {recipe.is_variant && (
                                             <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Variante</span>
                                         )}
                                     </div>
-                                    <div className="text-sm text-gray-500">{recipe.servings_default} porciones</div>
+                                    <div className="text-sm" style={{ color: colorTextSecondary }}>{recipe.servings_default} porciones</div>
                                 </div>
                                 
-                                <div className="flex justify-between items-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                <div className="flex justify-between items-end mt-2 pt-2 border-t" style={{ borderColor: colorBorderSecondary }}>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Total</span>
-                                        <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">${totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: colorTextSecondary }}>Total</span>
+                                        <span className="font-medium text-sm" style={{ color: colorText }}>${totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex flex-col items-end">
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Porción</span>
-                                        <span className="font-bold text-[#be185d] text-sm">${costPerServing.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: colorTextSecondary }}>Porción</span>
+                                        <span className="font-bold text-sm" style={{ color: colorPrimary }}>${costPerServing.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
 
                                 {/* Actions hover overlay */}
-                                <div className={`absolute top-2 right-2 flex gap-1 bg-white dark:bg-[#1f1f1f] p-1 rounded-lg border border-gray-100 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? 'opacity-100' : ''}`} onClick={(e) => e.stopPropagation()}>
+                                <div 
+                                    className={`absolute top-2 right-2 flex gap-1 p-1 rounded-lg border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? 'opacity-100' : ''}`} 
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}
+                                >
                                     <Button type="text" size="small" icon={<CopyOutlined />} onClick={() => handleOpenModal(recipe, true)} title="Duplicar" />
                                     <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleOpenModal(recipe)} title="Editar" />
                                     <Popconfirm
@@ -316,12 +321,12 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                         <Switch checkedChildren="Es variante" unCheckedChildren="Receta original" />
                     </Form.Item>
 
-                    <div className="mb-2 font-medium text-gray-700 dark:text-gray-300">Ingredientes</div>
+                    <div className="mb-2 font-medium" style={{ color: colorText }}>Ingredientes</div>
                     <Form.List name="ingredients">
                         {(fields, { add, remove }) => (
                             <div className="space-y-3 mb-4">
                                 {fields.map(({ key, name, ...restField }) => (
-                                    <div key={key} className="flex gap-2 items-start bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div key={key} className="flex gap-2 items-start p-2 rounded-lg border" style={{ background: colorBgElevated, borderColor: colorBorderSecondary }}>
                                         <Form.Item
                                             {...restField}
                                             name={[name, 'ingredientId']}

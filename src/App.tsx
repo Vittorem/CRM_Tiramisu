@@ -42,10 +42,12 @@ function App() {
             document.documentElement.style.setProperty('--color-cream', '#1a0f12');
             document.documentElement.style.setProperty('--color-espresso', '#f3e8eb');
             document.body.style.backgroundColor = '#1a0f12';
+            document.documentElement.classList.add('dark');
         } else {
             document.documentElement.style.setProperty('--color-cream', '#fff5f6');
             document.documentElement.style.setProperty('--color-espresso', '#3f2b2f');
             document.body.style.backgroundColor = '#fff5f6';
+            document.documentElement.classList.remove('dark');
         }
     }, [isDarkMode]);
 

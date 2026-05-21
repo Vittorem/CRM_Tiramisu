@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Typography, Row, Col, Tabs, Drawer, Empty } from 'antd';
+import { Typography, Row, Col, Tabs, Drawer, Empty, theme } from 'antd';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { IngredientsPanel } from './components/IngredientsPanel';
 import { RecipesPanel } from './components/RecipesPanel';
@@ -11,6 +11,7 @@ const { Title, Text } = Typography;
 
 export const RecetarioPage = () => {
     const isMobile = useIsMobile();
+    const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary } } = theme.useToken();
     const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
     return (
@@ -75,13 +76,13 @@ export const RecetarioPage = () => {
                                             {selectedRecipe ? (
                                                 <RecipeDetailPanel recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
                                             ) : (
-                                                <div className="hidden lg:flex h-full min-h-[500px] flex-col items-center justify-center bg-gray-50/30 dark:bg-[#1f1f1f]/20 rounded-3xl border border-gray-100 dark:border-gray-800/60 p-8">
+                                                <div className="hidden lg:flex h-full min-h-[500px] flex-col items-center justify-center rounded-3xl border p-8" style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}>
                                                     <Empty
                                                         image={<FileSearchOutlined style={{ fontSize: 64, color: '#e6ccb2' }} />}
                                                         description={
                                                             <div className="flex flex-col items-center mt-4">
-                                                                <Title level={4} className="text-gray-600 dark:text-gray-400 m-0" style={{ fontWeight: 600 }}>Selecciona una receta</Title>
-                                                                <Text type="secondary" className="text-center text-sm max-w-sm mt-3 leading-relaxed">
+                                                                <Title level={4} className="m-0" style={{ fontWeight: 600, color: colorTextSecondary }}>Selecciona una receta</Title>
+                                                                <Text className="text-center text-sm max-w-sm mt-3 leading-relaxed" style={{ color: colorTextSecondary }}>
                                                                     Explora tu recetario a la izquierda para ver desgloses, cotizar porciones y exportar a PDF.
                                                                 </Text>
                                                             </div>

@@ -6,6 +6,7 @@ import { Recipe, Ingredient } from '../../../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
+import { theme as antdTheme } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +16,7 @@ interface RecipeDetailPanelProps {
 }
 
 export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) => {
+    const { token: { colorBgContainer, colorBorderSecondary, colorText, colorTextSecondary } } = antdTheme.useToken();
     const { data: ingredients } = useFirestoreSubscription<Ingredient>('ingredients');
     const [desiredServings, setDesiredServings] = useState<number>(recipe.servings_default);
     const [clientName, setClientName] = useState('');
@@ -121,7 +123,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
             title: 'Ingrediente',
             dataIndex: 'name',
             key: 'name',
-            render: (text: string) => <span className="font-semibold text-gray-700 dark:text-gray-300">{text}</span>
+            render: (text: string) => <span style={{ fontWeight: 600, color: colorText }}>{text}</span>
         },
         {
             title: 'Cant.',
@@ -134,7 +136,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
             title: 'Costo',
             dataIndex: 'itemCost',
             key: 'itemCost',
-            render: (val: number) => <span className="text-gray-600 dark:text-gray-400">${val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            render: (val: number) => <span style={{ color: colorTextSecondary }}>${val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         }
     ];
 
@@ -147,7 +149,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
     const profitMarginPercent = totalQuoteAmount > 0 ? (estimatedTotalProfit / totalQuoteAmount) * 100 : 0;
 
     return (
-        <div className="bg-white dark:bg-[#1f1f1f] rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-800 h-full flex flex-col relative">
+        <div className="rounded-2xl p-4 md:p-6 shadow-sm border h-full flex flex-col relative" style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}>
             <Button 
                 type="text" 
                 icon={<CloseOutlined />} 
@@ -161,7 +163,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
                     <Title level={3} style={{ margin: 0, color: 'inherit' }}>{recipe.name}</Title>
                     <div className="flex items-center gap-3 mt-4">
                         <CalculatorOutlined className="text-gray-400 text-lg" />
-                        <Text className="text-base font-medium text-gray-600 dark:text-gray-400">Porciones:</Text>
+                        <Text className="text-base font-medium" style={{ color: colorTextSecondary }}>Porciones:</Text>
                         <InputNumber
                             min={1}
                             value={desiredServings}
@@ -175,8 +177,8 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
                 <div className="flex flex-col sm:items-end gap-5 w-full xl:w-auto">
                     <div className="flex justify-between sm:justify-end gap-6 md:gap-10 text-right bg-orange-50/70 dark:bg-orange-900/10 px-6 py-4 rounded-xl border border-orange-100 dark:border-orange-900/30 w-full sm:w-auto">
                         <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Costo Total</div>
-                            <div className="text-3xl font-black text-gray-800 dark:text-gray-200 leading-none">
+                            <div className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: colorTextSecondary }}>Costo Total</div>
+                            <div className="text-3xl font-black leading-none" style={{ color: colorText }}>
                                 ${scaledData.totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                         </div>
@@ -243,7 +245,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar border border-gray-100 dark:border-gray-800 rounded-lg">
+            <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar border rounded-lg" style={{ borderColor: colorBorderSecondary }}>
                 <Table 
                     dataSource={scaledData.items} 
                     columns={columns} 
