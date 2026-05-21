@@ -16,6 +16,7 @@ import {
     MoonOutlined,
     PlusOutlined,
     BookOutlined,
+    PieChartOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthGate';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -46,6 +47,7 @@ export const AppLayout = () => {
         { key: '/inventory', icon: <InboxOutlined />, label: 'Inventario' },
         { key: '/recetario', icon: <BookOutlined />, label: 'Recetario' },
         { key: '/reports', icon: <BarChartOutlined />, label: 'Reportes' },
+        { key: '/behavior', icon: <PieChartOutlined />, label: 'Comportamiento' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Configuración' },
     ];
 

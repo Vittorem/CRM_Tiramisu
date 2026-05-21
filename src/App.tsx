@@ -14,6 +14,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { RecetarioPage } from './features/recetario/RecetarioPage';
+import { BehaviorPage } from './features/behavior/BehaviorPage';
 
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ function App() {
                                         <Route path="orders" element={<OrdersPage />} />
 
                                         <Route path="reports" element={<ReportsPage />} />
+                                        <Route path="behavior" element={<BehaviorPage />} />
                                         <Route path="inventory" element={<InventoryPage />} />
                                         <Route path="recetario" element={<RecetarioPage />} />
                                         <Route path="settings" element={<SettingsPage />} />
