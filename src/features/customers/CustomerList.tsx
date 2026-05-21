@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Button, Input, Space, Tag, Popconfirm, message, Card, List as AntList, Skeleton } from 'antd';
+import { Table, Button, Input, Space, Tag, Popconfirm, message, Card, List as AntList, Skeleton, theme } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { Customer } from '../../types';
@@ -15,6 +15,7 @@ export const CustomerList = () => {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
     const isMobile = useIsMobile();
+    const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText } } = theme.useToken();
 
     const handleAdd = () => {
         setEditingCustomer(null);
@@ -116,7 +117,7 @@ export const CustomerList = () => {
                 </Button>
             </div>
 
-            <Card bodyStyle={{ padding: isMobile ? 0 : 24 }} bordered={!isMobile} style={{ background: isMobile ? 'transparent' : '#fff', boxShadow: 'none' }}>
+            <Card bodyStyle={{ padding: isMobile ? 0 : 24 }} bordered={!isMobile} style={{ background: isMobile ? 'transparent' : colorBgContainer, boxShadow: 'none' }}>
                 <div style={{ marginBottom: 16, padding: isMobile ? '0 16px' : 0 }}>
                     <Input
                         prefix={<SearchOutlined />}
@@ -131,21 +132,21 @@ export const CustomerList = () => {
                 ) : isMobile ? (
                     <AntList
                         dataSource={filteredData}
-                        style={{ background: '#fff' }}
+                        style={{ background: colorBgContainer }}
                         renderItem={item => (
                             <div style={{ 
                                 padding: '12px 16px', 
-                                borderBottom: '1px solid #f0f0f0',
+                                borderBottom: `1px solid ${colorBorderSecondary}`,
                                 display: 'flex', 
                                 flexDirection: 'column',
                                 gap: 4
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <strong style={{ fontSize: 16, color: '#333' }}>{item.fullName}</strong>
+                                    <strong style={{ fontSize: 16, color: colorText }}>{item.fullName}</strong>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                                    <span style={{ color: '#666', fontSize: 14 }}>{item.phone}</span>
-                                    <span style={{ fontSize: 12, color: '#888' }}>{item.mainContactMethod}</span>
+                                    <span style={{ color: colorTextSecondary, fontSize: 14 }}>{item.phone}</span>
+                                    <span style={{ fontSize: 12, color: colorTextSecondary }}>{item.mainContactMethod}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                                     <div style={{ flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>

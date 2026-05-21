@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Tag, Space, Button, Input, Select, List as AntList, Card, Modal, Typography } from 'antd';
+import { Table, Tag, Space, Button, Input, Select, List as AntList, Card, Modal, Typography, theme } from 'antd';
 import { EditOutlined, DeleteOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons';
 import { SwipeableList, SwipeableListItem, SwipeAction, TrailingActions, LeadingActions } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
@@ -47,6 +47,7 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | null>(null);
     const isMobile = useIsMobile();
+    const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText, colorPrimary, colorFillAlter } } = theme.useToken();
 
     const filteredData = orders
         .filter(o => {
@@ -192,9 +193,9 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                 borderRadius: 16,
                                 padding: '2px 12px',
                                 fontWeight: statusFilter === null ? 700 : 400,
-                                background: statusFilter === null ? '#1677ff' : '#fafafa',
-                                color: statusFilter === null ? 'white' : '#555',
-                                border: statusFilter === null ? '1px solid #1677ff' : '1px solid #d9d9d9',
+                                background: statusFilter === null ? colorPrimary : colorFillAlter,
+                                color: statusFilter === null ? 'white' : colorTextSecondary,
+                                border: statusFilter === null ? `1px solid ${colorPrimary}` : `1px solid ${colorBorderSecondary}`,
                                 flexShrink: 0,
                             }}
                             onClick={() => setStatusFilter(null)}
@@ -209,9 +210,9 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                     borderRadius: 16,
                                     padding: '2px 12px',
                                     fontWeight: statusFilter === s ? 700 : 400,
-                                    background: statusFilter === s ? '#1677ff' : '#fafafa',
-                                    color: statusFilter === s ? 'white' : '#555',
-                                    border: statusFilter === s ? '1px solid #1677ff' : '1px solid #d9d9d9',
+                                    background: statusFilter === s ? colorPrimary : colorFillAlter,
+                                    color: statusFilter === s ? 'white' : colorTextSecondary,
+                                    border: statusFilter === s ? `1px solid ${colorPrimary}` : `1px solid ${colorBorderSecondary}`,
                                     flexShrink: 0,
                                 }}
                                 onClick={() => setStatusFilter(statusFilter === s ? null : s)}
@@ -265,21 +266,21 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                             return (
                                 <>
                                     {/* #5 — Status group separator */}
-                                    {statusGroup && !statusFilter && (
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            padding: '12px 4px 6px',
-                                            marginTop: index > 0 ? 8 : 0,
-                                        }}>
-                                            <div style={{ height: 1, flex: 1, background: '#e0e0e0' }} />
-                                            <Text strong style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
-                                                {statusGroup.status} ({groupCount})
-                                            </Text>
-                                            <div style={{ height: 1, flex: 1, background: '#e0e0e0' }} />
-                                        </div>
-                                    )}
+                                        {statusGroup && !statusFilter && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    padding: '12px 4px 6px',
+                                                    marginTop: index > 0 ? 8 : 0,
+                                                }}>
+                                                    <div style={{ height: 1, flex: 1, background: colorBorderSecondary }} />
+                                                    <Text strong style={{ fontSize: 12, color: colorTextSecondary, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
+                                                        {statusGroup.status} ({groupCount})
+                                                    </Text>
+                                                    <div style={{ height: 1, flex: 1, background: colorBorderSecondary }} />
+                                                </div>
+                                            )}
                                     <SwipeableListItem
                                         leadingActions={item.status !== 'Entregado' ? leadingActions() : undefined}
                                         trailingActions={trailingActions()}
@@ -291,16 +292,17 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                                 width: '100%', 
                                                 borderRadius: 10, 
                                                 boxShadow: 'none', 
-                                                border: '1px solid #f0f0f0' 
+                                                border: `1px solid ${colorBorderSecondary}`,
+                                                background: colorBgContainer
                                             }}
                                             bodyStyle={{ padding: '12px 16px', cursor: 'pointer' }}
                                             onClick={() => onEdit(item)}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                                <strong style={{ fontSize: 16, color: '#222' }}>{item.customerName}</strong>
-                                                <strong style={{ fontSize: 16, color: '#222' }}>${item.total.toFixed(2)}</strong>
+                                                <strong style={{ fontSize: 16, color: colorText }}>{item.customerName}</strong>
+                                                <strong style={{ fontSize: 16, color: colorText }}>${item.total.toFixed(2)}</strong>
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: '#666' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: colorTextSecondary }}>
                                                 <div>{item.deliveryMethod === 'Envío' ? '🚚' : '🏪'} {toDay(item.deliveryDate)?.format('DD/MM HH:mm')}</div>
                                                 {item.paymentStatus !== 'Pagado' ? (
                                                     <span style={{ color: item.paymentStatus === 'Pago Parcial' ? '#faad14' : '#ff4d4f', fontWeight: 500 }}>
@@ -310,11 +312,11 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                                     <span style={{ color: '#52c41a', fontWeight: 500 }}>✅ Pagado</span>
                                                 )}
                                             </div>
-                                            <div style={{ color: '#555', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <div style={{ color: colorTextSecondary, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 <span style={{ opacity: 0.7, marginRight: 4 }}>📦</span>{getProductText(item)}
                                             </div>
                                             {item.notes && (
-                                                <div style={{ fontSize: 12, color: '#999', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                <div style={{ fontSize: 12, color: colorTextSecondary, opacity: 0.8, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     <span style={{ opacity: 0.7, marginRight: 4 }}>📝</span>{item.notes}
                                                 </div>
                                             )}

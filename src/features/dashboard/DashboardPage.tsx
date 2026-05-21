@@ -1,32 +1,25 @@
 import { useMemo, useState } from 'react';
-import { Row, Col, Card, Typography, Statistic, DatePicker, Divider, Button, Drawer, List, Result, Segmented } from 'antd';
+import { Row, Col, Card, Typography, DatePicker, Divider, Segmented, theme } from 'antd';
+import { useTheme } from '../../App';
 import {
     DollarOutlined,
     ShoppingCartOutlined,
     UserOutlined,
     RiseOutlined,
     FallOutlined,
-    ExclamationCircleOutlined,
     TrophyOutlined,
     CarOutlined,
     CrownOutlined,
 } from '@ant-design/icons';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-    PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer,
+    Cell, BarChart, Bar, ResponsiveContainer,
 } from 'recharts';
 import dayjs from 'dayjs';
 import { useFirestoreSubscription } from '../../hooks/useFirestore';
 import { Order, Customer, Recipe, Ingredient } from '../../types';
 import { getOrderDate, getDeliveredOrdersInRange } from '../../utils/dateHelpers';
-import { computeDemographics, getInactiveCustomers } from '../../utils/demographicsHelpers';
 import { calculateOrderEstimatedCost } from '../../utils/costHelpers';
-import {
-    computeCustomerRFMScores,
-    aggregateRFMSegments,
-    formatRFMForChart,
-    type RFMSegmentResult
-} from '../../utils/rfmAnalysis';
 
 // Removed unused IntelligentAlerts because they are now in Top App Bar
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -37,16 +30,60 @@ const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088FE', '#00C49F'
 
 // ─── Small sub-components ────────────────────────────────────────────────────
 
-function KPICard(props: { title: string; value: string | number; prefix?: React.ReactNode; suffix?: React.ReactNode; color?: string }) {
+function KPICard(props: { title: string; value: string | number; prefix?: React.ReactNode; suffix?: React.ReactNode; color?: string; isDarkMode?: boolean }) {
+    const isDark = props.isDarkMode;
     return (
-        <Card bordered={false} style={{ borderTop: `3px solid ${props.color || '#1890ff'}`, borderRadius: 12 }} styles={{ body: { padding: '12px 16px' } }}>
-            <Statistic 
-                title={<span style={{ fontSize: 13, color: '#8c8c8c' }}>{props.title}</span>} 
-                value={props.value} 
-                prefix={props.prefix} 
-                suffix={props.suffix} 
-                valueStyle={{ fontSize: 20, fontWeight: 700 }}
-            />
+        <Card 
+            bordered={false} 
+            style={{ 
+                borderRadius: 16, 
+                background: isDark 
+                    ? 'linear-gradient(135deg, rgba(38, 22, 26, 0.9) 0%, rgba(20, 10, 12, 0.9) 100%)' 
+                    : 'linear-gradient(135deg, #ffffff 0%, #fffcfc 100%)',
+                boxShadow: isDark
+                    ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+                    : '0 8px 32px 0 rgba(219, 39, 119, 0.04)',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(219, 39, 119, 0.05)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                overflow: 'hidden',
+                position: 'relative'
+            }} 
+            styles={{ body: { padding: '20px 24px' } }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <span style={{ fontSize: 12, color: isDark ? '#b3a1a5' : '#8c7a7e', display: 'block', marginBottom: 6, fontWeight: 600, letterSpacing: '0.5px' }}>
+                        {props.title.toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: 24, fontWeight: 800, color: isDark ? '#fff' : '#3f2b2f', letterSpacing: '-0.5px' }}>
+                        {props.value} {props.suffix && <span style={{ fontSize: 13, fontWeight: 500, color: isDark ? '#8c7a7e' : '#b3a1a5' }}>{props.suffix}</span>}
+                    </span>
+                </div>
+                <div style={{ 
+                    width: 48, 
+                    height: 48, 
+                    borderRadius: 12, 
+                    background: props.color ? `${props.color}15` : '#db277715', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: props.color || '#db2777',
+                    fontSize: 22
+                }}>
+                    {props.prefix}
+                </div>
+            </div>
+            <div style={{
+                position: 'absolute',
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: props.color || '#db2777',
+                opacity: 0.02,
+                bottom: -30,
+                right: -30,
+                filter: 'blur(20px)'
+            }} />
         </Card>
     );
 }
@@ -58,7 +95,7 @@ interface CustomizedDotProps {
 }
 
 function CustomizedDot({ cx = 0, cy = 0, value = 0 }: CustomizedDotProps) {
-    const color = value > 0 ? '#52c41a' : '#ff4d4f';
+    const color = value > 0 ? '#10b981' : '#ef4444';
     return <circle cx={cx} cy={cy} r={4} stroke={color} strokeWidth={2} fill={color} />;
 }
 
@@ -66,6 +103,8 @@ function CustomizedDot({ cx = 0, cy = 0, value = 0 }: CustomizedDotProps) {
 
 export const DashboardPage = () => {
     const isMobile = useIsMobile();
+    const { isDarkMode } = useTheme();
+    const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText } } = theme.useToken();
 
     const { data: orders } = useFirestoreSubscription<Order>('orders');
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
@@ -89,7 +128,7 @@ export const DashboardPage = () => {
         dayjs().startOf('month'),
         dayjs().endOf('month'),
     ]);
-    const [inactiveModalOpen, setInactiveModalOpen] = useState(false);
+
 
     // ─── Derived data ─────────────────────────────────────────────────
 
@@ -188,93 +227,10 @@ export const DashboardPage = () => {
         };
     }, [deliveredOrders, recipes, ingredients, customers]);
 
-    const demographics = useMemo(
-        () => computeDemographics(filteredCustomers, deliveredOrders),
-        [filteredCustomers, deliveredOrders]
-    );
 
-    const inactiveCustomers = useMemo(
-        () => getInactiveCustomers(filteredCustomers, filteredOrders, dateRange[1]),
-        [filteredCustomers, filteredOrders, dateRange]
-    );
-
-    // ─── RFM Analysis ──────────────────────────────────────────────────
-
-    const rfmScores = useMemo(
-        () => computeCustomerRFMScores(customers, orders, dateRange[1]),
-        [customers, orders, dateRange]
-    );
-
-    const rfmSegments = useMemo(
-        () => aggregateRFMSegments(rfmScores),
-        [rfmScores]
-    );
-
-    const rfmChartData = useMemo(
-        () => formatRFMForChart(rfmSegments),
-        [rfmSegments]
-    );
-
-    // ─── Alerts moved to Global Component ────────────────────────────
-
-    // ─── Insights ─────────────────────────────────────────────────────
-
-    const insights = useMemo(() => {
-        const items: string[] = [];
-        if (metrics.avgTicket > 0) items.push(`🎯 Ticket promedio: $${metrics.avgTicket.toFixed(0)}`);
-        if (metrics.topProducts.length > 0) items.push(`🏆 Producto estrella: ${metrics.topProducts[0].name}`);
-        if (inactiveCustomers.length > 0) items.push(`⚠️ ${inactiveCustomers.length} cliente(s) sin compra en 30 días`);
-        if (demographics.genderData.length > 0) {
-            const top = [...demographics.genderData].sort((a, b) => b.value - a.value)[0];
-            items.push(`👥 Mayoría de compradores: ${top.name}`);
-        }
-        return items;
-    }, [metrics, inactiveCustomers, demographics]);
 
     // ─── Tab Components ────────────────────────────────────────────────
 
-    const rfmTabContent = (
-        <Row gutter={[16, 16]}>
-            <Col xs={24} md={10}>
-                <Card title="Distribución de Segmentos" size="small">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={rfmChartData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={100}
-                                label
-                            >
-                                {rfmChartData.map((_, i) => (
-                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </Card>
-            </Col>
-            <Col xs={24} md={14}>
-                <Card title="Detalle por Segmento" size="small">
-                    <List
-                        dataSource={rfmSegments}
-                        renderItem={(segment: RFMSegmentResult) => (
-                            <List.Item>
-                                <List.Item.Meta
-                                    title={`${segment.segment} (${segment.count} clientes)`}
-                                    description={`Revenue: $${segment.totalRevenue.toFixed(2)} • Ticket Promedio: $${segment.avgOrderValue.toFixed(2)}`}
-                                />
-                            </List.Item>
-                        )}
-                    />
-                </Card>
-            </Col>
-        </Row>
-    );
 
     // ─── Alerts Tab Removed ──────────────────────────────────────────
 
@@ -282,8 +238,11 @@ export const DashboardPage = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 16, marginBottom: 24 }}>
-                <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>Dashboard</Title>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 16, marginBottom: 28 }}>
+                <div>
+                    <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 800, letterSpacing: '-0.5px' }}>Dashboard</Title>
+                    <span style={{ color: colorTextSecondary, fontSize: 13 }}>Resumen general de tu CRM de Repostería</span>
+                </div>
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, width: isMobile ? '100%' : 'auto' }}>
                     <Segmented
                         options={['Todos', 'B2C', 'B2B']}
@@ -305,25 +264,25 @@ export const DashboardPage = () => {
             {/* KPIs */}
             <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Ventas Totales" value={`$${metrics.totalSales.toFixed(2)}`} prefix={<DollarOutlined />} color="#52c41a" />
+                    <KPICard title="Ventas Totales" value={`$${metrics.totalSales.toFixed(2)}`} prefix={<DollarOutlined />} color="#10b981" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Costo Operativo" value={`$${metrics.totalOperationalCosts.toFixed(2)}`} prefix={<FallOutlined />} color="#ff4d4f" />
+                    <KPICard title="Costo Operativo" value={`$${metrics.totalOperationalCosts.toFixed(2)}`} prefix={<FallOutlined />} color="#ef4444" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Ganancia Neta" value={`$${metrics.netProfit.toFixed(2)}`} prefix={<RiseOutlined />} color="#faad14" />
+                    <KPICard title="Ganancia Neta" value={`$${metrics.netProfit.toFixed(2)}`} prefix={<RiseOutlined />} color="#f59e0b" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Margen Beneficio" value={`${metrics.profitMargin.toFixed(1)}%`} prefix={<TrophyOutlined />} color={metrics.profitMargin >= 30 ? "#52c41a" : "#faad14"} />
+                    <KPICard title="Margen Beneficio" value={`${metrics.profitMargin.toFixed(1)}%`} prefix={<TrophyOutlined />} color={metrics.profitMargin >= 30 ? "#10b981" : "#f59e0b"} isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Ingresos por Envíos" value={`$${metrics.totalShippingRevenue.toFixed(2)}`} prefix={<CarOutlined />} color="#00C49F" />
+                    <KPICard title="Ingresos por Envíos" value={`$${metrics.totalShippingRevenue.toFixed(2)}`} prefix={<CarOutlined />} color="#06b6d4" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Pedidos" value={metrics.totalOrders} prefix={<ShoppingCartOutlined />} color="#1890ff" />
+                    <KPICard title="Pedidos" value={metrics.totalOrders} prefix={<ShoppingCartOutlined />} color="#3b82f6" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <KPICard title="Clientes Únicos" value={metrics.uniqueCustomers} prefix={<UserOutlined />} color="#722ed1" />
+                    <KPICard title="Clientes Únicos" value={metrics.uniqueCustomers} prefix={<UserOutlined />} color="#8b5cf6" isDarkMode={isDarkMode} />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
                     <KPICard 
@@ -331,36 +290,35 @@ export const DashboardPage = () => {
                         value={metrics.topCustomer ? metrics.topCustomer.name.split(' ')[0] : 'N/A'} 
                         suffix={metrics.topCustomer ? `(${metrics.topCustomer.qty} ped.)` : ''} 
                         prefix={<CrownOutlined />} 
-                        color="#eb2f96" 
+                        color="#ec4899" 
+                        isDarkMode={isDarkMode}
                     />
                 </Col>
             </Row>
 
             {/* Charts Row */}
             <Divider />
-            <Row gutter={[16, 16]}>
-                <Col xs={24} lg={16}>
-                    <Card title="Tendencia de Ventas" size="small">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={metrics.dailyTrend}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Line type="monotone" dataKey="ventas" stroke="#1890ff" dot={<CustomizedDot />} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </Card>
-                </Col>
-                <Col xs={24} lg={8}>
-                    <Card title={`Productos (${metrics.topProducts.length})`} size="small">
-                        <ResponsiveContainer width="100%" height={Math.max(200, metrics.topProducts.length * 50)}>
+            <Row gutter={[24, 24]}>
+                <Col xs={24}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}>🏆 Top Productos Vendidos</span>} 
+                        size="default" 
+                        style={{ 
+                            borderRadius: 16, 
+                            borderTop: '4px solid #ec4899',
+                            boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.2)' : '0 8px 32px 0 rgba(0,0,0,0.02)',
+                            background: colorBgContainer
+                        }}
+                    >
+                        <ResponsiveContainer width="100%" height={Math.max(350, metrics.topProducts.length * 50)}>
                             <BarChart data={metrics.topProducts} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
-                                <YAxis dataKey="name" type="category" width={100} />
-                                <Tooltip formatter={(value: number | undefined) => [`${value} unidades`, 'Vendidos']} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={colorBorderSecondary} />
+                                <XAxis type="number" tick={{ fill: colorTextSecondary }} />
+                                <YAxis dataKey="name" type="category" width={150} fontSize={13} fontWeight={500} tick={{ fill: colorTextSecondary }} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: colorBgContainer, borderColor: colorBorderSecondary, color: colorText, borderRadius: 8 }} 
+                                    formatter={(value: number | undefined) => [`${value} unidades`, 'Vendidos']} 
+                                />
                                 <Bar dataKey="qty" radius={[0, 6, 6, 0]}>
                                     {metrics.topProducts.map((_, i) => (
                                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -370,101 +328,30 @@ export const DashboardPage = () => {
                         </ResponsiveContainer>
                     </Card>
                 </Col>
-            </Row>
-
-            {/* Demographics Row */}
-            <Divider />
-            <Row gutter={[16, 16]}>
-                <Col xs={24} md={8}>
-                    <Card title="Género de Compradores" size="small">
+                <Col xs={24}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}>📈 Tendencia de Ventas</span>} 
+                        size="small" 
+                        style={{ 
+                            borderRadius: 16, 
+                            borderTop: '4px solid #3b82f6',
+                            boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.2)' : '0 8px 32px 0 rgba(0,0,0,0.02)',
+                            background: colorBgContainer
+                        }}
+                    >
                         <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie data={demographics.genderData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                    {demographics.genderData.map((_, i) => (
-                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </Card>
-                </Col>
-                <Col xs={24} md={8}>
-                    <Card title="Rango de Edad" size="small">
-                        <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={demographics.ageData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="value" fill="#8884d8" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </Card>
-                </Col>
-                <Col xs={24} md={8}>
-                    <Card title="Top Ocupaciones" size="small">
-                        <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={demographics.topOccupations} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
-                                <YAxis dataKey="name" type="category" width={80} />
-                                <Tooltip />
-                                <Bar dataKey="value" fill="#82ca9d" />
-                            </BarChart>
+                            <LineChart data={metrics.dailyTrend}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={colorBorderSecondary} />
+                                <XAxis dataKey="date" tick={{ fill: colorTextSecondary }} />
+                                <YAxis tick={{ fill: colorTextSecondary }} />
+                                <Tooltip contentStyle={{ backgroundColor: colorBgContainer, borderColor: colorBorderSecondary, color: colorText, borderRadius: 8 }} />
+                                <Legend wrapperStyle={{ color: colorText }} />
+                                <Line type="monotone" dataKey="ventas" stroke="#3b82f6" dot={<CustomizedDot />} strokeWidth={3} />
+                            </LineChart>
                         </ResponsiveContainer>
                     </Card>
                 </Col>
             </Row>
-
-            {/* Insights */}
-            <Divider />
-            <Card title="✨ Insights" size="small">
-                {insights.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: 16 }}>
-                        {insights.map((insight, i) => (
-                            <li key={i} style={{ marginBottom: 4 }}>{insight}</li>
-                        ))}
-                    </ul>
-                ) : (
-                    <Result
-                        icon={<ExclamationCircleOutlined />}
-                        title="Sin datos suficientes"
-                        subTitle="Registra pedidos entregados para ver insights."
-                    />
-                )}
-                {inactiveCustomers.length > 0 && (
-                    <Button type="link" icon={<FallOutlined />} onClick={() => setInactiveModalOpen(true)}>
-                        Ver {inactiveCustomers.length} cliente(s) inactivos
-                    </Button>
-                )}
-            </Card>
-
-            {/* Análisis de Comportamiento RFM */}
-            <Divider />
-            <Card title="📊 Análisis de Comportamiento (RFM)" size="small" style={{ marginBottom: 16 }}>
-                {rfmTabContent}
-            </Card>
-
-            {/* Inactive customers modal */}
-            <Drawer
-                title="Clientes Inactivos (30+ días sin compra)"
-                placement={isMobile ? 'bottom' : 'right'}
-                width={isMobile ? '100%' : 400}
-                height={isMobile ? '80vh' : '100%'}
-                open={inactiveModalOpen}
-                onClose={() => setInactiveModalOpen(false)}
-            >
-                <List
-                    dataSource={inactiveCustomers}
-                    renderItem={c => (
-                        <List.Item>
-                            <List.Item.Meta title={c.fullName} description={c.phone} />
-                            <div style={{ color: '#ff4d4f', fontWeight: 'bold', fontSize: 13 }}>30+ días inactivo</div>
-                        </List.Item>
-                    )}
-                />
-            </Drawer>
         </div>
     );
 };

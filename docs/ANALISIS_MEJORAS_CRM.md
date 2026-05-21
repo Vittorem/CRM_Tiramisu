@@ -1,6 +1,6 @@
 # Análisis Profundo: Tiramisu como CRM
 
-Tras revisar la arquitectura, los módulos y los modelos de datos del proyecto (`src/types/index.ts`, estructura de carpetas, etc.), se observa que **Tiramisu es actualmente un híbrido excelente entre un Gestor de Pedidos (OMS), un mini-ERP (Inventario/Recetas) y un CRM operativo básico (Gestión de Contactos y Lealtad)**. 
+Tras revisar la arquitectura, los módulos y los modelos de datos del proyecto (`src/types/index.ts`, estructura de carpetas, etc.), se observa que **Tiramisu es actualmente un híbrido excelente entre un Gestor de Pedidos (OMS), un mini-ERP (Inventario/Recetas) y un CRM operativo básico (Gestión de Contactos)**. 
 
 Sin embargo, evaluándolo estrictamente bajo el estándar de un **CRM (Customer Relationship Management) maduro**, aquí te detallo lo que considero que le **falta** para llevarlo al siguiente nivel:
 

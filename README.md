@@ -1,8 +1,6 @@
 # King Candy: CRM Tiramisú
 
-Sistema integral de gestión de clientes, pedidos, inventario, reportes y lealtad para **King Candy La Casa Del Tiramisú**.
-
-## 🚀 Funcionalidades de Negocio
+Sistema integral de gestión de clientes, pedidos, inventario y reportes para **King Candy La Casa Del Tiramisú**.## 🚀 Funcionalidades de Negocio
 
 ### 🛒 Gestión de Pedidos (Kanban)
 - Flujo de trabajo visual mediante un tablero Kanban para el seguimiento de pedidos desde la recepción hasta la entrega.
@@ -13,11 +11,6 @@ Sistema integral de gestión de clientes, pedidos, inventario, reportes y lealta
 - Base de datos centralizada de clientes con historial de compras.
 - Análisis demográfico automático para identificar zonas de mayor venta.
 - Sistema de detección de clientes inactivos para campañas de reactivación.
-
-### 🏆 Programa de Lealtad (King Candy Rewards)
-- **Acumulación de Puntos:** Los clientes ganan puntos por cada Tiramisú comprado (Bambino: 1, Mediano: 8, Grande: 11).
-- **Redención:** Canje de puntos por productos gratis con reglas de negocio estrictas (requiere compra adicional).
-- **Notificaciones WhatsApp:** Integración directa para notificar a los clientes sobre sus puntos acumulados y premios disponibles.
 
 ### 🥗 Recetario & Costeo Estricto
 - Gestión detallada de insumos e ingredientes con precios actualizados.
@@ -54,14 +47,13 @@ src/
 │   ├── customers/     # CRM y Demografía
 │   ├── dashboard/     # Métricas y KPIs
 │   ├── inventory/     # Stock y movimientos de almacén
-│   ├── loyalty/       # Dashboard y reglas del programa de lealtad
 │   ├── orders/        # Tablero Kanban y formularios de pedidos
 │   ├── recetario/     # Insumos, recetas y cálculos de costos
 │   ├── reports/       # Lógica de exportación de datos
 │   └── settings/      # Configuración de catálogos y sistema
 ├── hooks/             # Custom hooks (useFirestore, useIsMobile)
 ├── services/          # Servicios externos (Exportación, Firebase)
-└── utils/             # Lógica de negocio (Loyalty rules, Helpers)
+└── utils/             # Lógica de negocio (Helpers, Análisis de Comportamiento RFM)
 ```
 
 ## ⚙️ Configuración

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Divider, Row, Col, Skeleton } from 'antd';
+import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Divider, Row, Col, Skeleton, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined, CalculatorOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { InventoryItem, Order } from '../../types';
@@ -15,6 +15,7 @@ function InventoryList({ items, onEdit, onDelete, onMovement }: {
     onDelete: (id: string) => void;
     onMovement: (item: InventoryItem, type: 'IN' | 'OUT') => void;
 }) {
+    const { token: { colorTextSecondary } } = theme.useToken();
     const columns = [
         { title: 'Nombre', dataIndex: 'name', key: 'name' },
         { title: 'Categoría', dataIndex: 'category', key: 'category' },
@@ -56,7 +57,7 @@ function InventoryList({ items, onEdit, onDelete, onMovement }: {
                             <strong style={{ fontSize: 16 }}>{item.name}</strong>
                             <Tag color={isLow ? 'red' : 'green'}>{item.stockPackages} / {item.minPackages} {item.purchaseUnitLabel}</Tag>
                         </div>
-                        <div style={{ color: '#666', fontSize: 13, margin: '8px 0' }}>📂 {item.category}</div>
+                        <div style={{ color: colorTextSecondary, fontSize: 13, margin: '8px 0' }}>📂 {item.category}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Space>
                                 <Button icon={<ArrowUpOutlined />} onClick={() => onMovement(item, 'IN')} />

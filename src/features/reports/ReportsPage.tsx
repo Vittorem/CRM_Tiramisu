@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag } from 'antd';
+import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag, theme } from 'antd';
 import {
     FileExcelOutlined,
     FilePdfOutlined,
@@ -35,6 +35,7 @@ const { Title, Text } = Typography;
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
 
 export const ReportsPage = () => {
+    const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText } } = theme.useToken();
     const { data: orders } = useFirestoreSubscription<Order>('orders');
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
     const { data: recipes } = useFirestoreSubscription<Recipe>('recipes');
@@ -271,7 +272,7 @@ export const ReportsPage = () => {
                                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip contentStyle={{ backgroundColor: colorBgContainer, borderColor: colorBorderSecondary, color: colorText, borderRadius: 8 }} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <Space size="large" style={{ marginTop: 8 }}>
@@ -303,10 +304,10 @@ export const ReportsPage = () => {
                         >
                             <ResponsiveContainer width="100%" height={200}>
                                 <BarChart data={demographics.ageData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis allowDecimals={false} />
-                                    <Tooltip />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={colorBorderSecondary} />
+                                    <XAxis dataKey="name" tick={{ fill: colorTextSecondary, fontSize: 11 }} />
+                                    <YAxis allowDecimals={false} tick={{ fill: colorTextSecondary }} />
+                                    <Tooltip contentStyle={{ backgroundColor: colorBgContainer, borderColor: colorBorderSecondary, color: colorText, borderRadius: 8 }} />
                                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                                         {demographics.ageData.map((_, i) => (
                                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
