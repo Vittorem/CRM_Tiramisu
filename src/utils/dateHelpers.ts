@@ -1,5 +1,4 @@
 import dayjs from 'dayjs';
-import { Timestamp } from 'firebase/firestore';
 import { Order } from '../types';
 
 /**
@@ -19,14 +18,39 @@ export function getOrderDate(order: Order): dayjs.Dayjs | null {
 /**
  * Converts a Firestore Timestamp (or Timestamp-like object) to dayjs.
  */
-export function toDay(ts: Timestamp | { seconds: number } | undefined | null): dayjs.Dayjs | null {
+export function toDay(ts: any): dayjs.Dayjs | null {
     if (!ts) return null;
-    if ('toDate' in ts && typeof ts.toDate === 'function') {
-        return dayjs(ts.toDate());
+    
+    if (dayjs.isDayjs(ts)) {
+        return ts.isValid() ? ts : null;
     }
-    if ('seconds' in ts) {
-        return dayjs(ts.seconds * 1000);
+    
+    if (ts instanceof Date) {
+        const d = dayjs(ts);
+        return d.isValid() ? d : null;
     }
+    
+    if (typeof ts === 'string' || typeof ts === 'number') {
+        const d = dayjs(ts);
+        return d.isValid() ? d : null;
+    }
+    
+    if (typeof ts === 'object') {
+        try {
+            if ('toDate' in ts && typeof ts.toDate === 'function') {
+                const d = dayjs(ts.toDate());
+                return d.isValid() ? d : null;
+            }
+            if ('seconds' in ts && typeof ts.seconds === 'number') {
+                const d = dayjs(ts.seconds * 1000);
+                return d.isValid() ? d : null;
+            }
+        } catch (e) {
+            console.error('Error parsing timestamp in toDay:', e);
+            return null;
+        }
+    }
+    
     return null;
 }
 
