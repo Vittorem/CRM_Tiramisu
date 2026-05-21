@@ -78,16 +78,6 @@ export const BehaviorPage = () => {
 
     const [selectedSegment, setSelectedSegment] = useState<RFMSegment>('Champions');
 
-    if (loadingCustomers || loadingOrders) {
-        return (
-            <div style={{ padding: 24 }}>
-                <Card bordered={false} style={{ background: colorBgContainer }}>
-                    <Skeleton active paragraph={{ rows: 8 }} />
-                </Card>
-            </div>
-        );
-    }
-
     // ─── RFM Computations ──────────────────────────────────────────
 
     const rfmScores = useMemo(() => {
@@ -136,6 +126,25 @@ export const BehaviorPage = () => {
         return map;
     }, [rfmScores, customers]);
 
+    const currentSegmentStats = useMemo(() => {
+        return rfmSegments.find(s => s.segment === selectedSegment) || {
+            segment: selectedSegment,
+            count: 0,
+            totalRevenue: 0,
+            avgOrderValue: 0
+        };
+    }, [rfmSegments, selectedSegment]);
+
+    if (loadingCustomers || loadingOrders) {
+        return (
+            <div style={{ padding: 24 }}>
+                <Card bordered={false} style={{ background: colorBgContainer }}>
+                    <Skeleton active paragraph={{ rows: 8 }} />
+                </Card>
+            </div>
+        );
+    }
+
     const handleSendWhatsApp = (custName: string, phone: string, segment: RFMSegment) => {
         const config = SEGMENT_DESCRIPTIONS[segment];
         const firstName = custName.split(' ')[0];
@@ -145,14 +154,7 @@ export const BehaviorPage = () => {
         window.open(url, '_blank');
     };
 
-    const currentSegmentStats = useMemo(() => {
-        return rfmSegments.find(s => s.segment === selectedSegment) || {
-            segment: selectedSegment,
-            count: 0,
-            totalRevenue: 0,
-            avgOrderValue: 0
-        };
-    }, [rfmSegments, selectedSegment]);
+
 
     const activeCustomersList = customersBySegmentMap[selectedSegment] || [];
 
