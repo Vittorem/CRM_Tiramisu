@@ -22,6 +22,7 @@ import { Order, Customer, Recipe, Ingredient, Product } from '../../types';
 import { getDeliveredOrdersInRange } from '../../utils/dateHelpers';
 import { computeDemographics } from '../../utils/demographicsHelpers';
 import { findRecipeForProduct, calculateCostPerServing } from '../../utils/costHelpers';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import {
     exportOrdersExcel,
     exportOrdersPDF,
@@ -42,6 +43,7 @@ export const ReportsPage = () => {
     const { data: recipes } = useFirestoreSubscription<Recipe>('recipes');
     const { data: ingredients } = useFirestoreSubscription<Ingredient>('ingredients');
     const { data: products } = useFirestoreSubscription<Product>('catalog_products');
+    const isMobile = useIsMobile();
 
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
         dayjs().startOf('month'),
@@ -141,9 +143,16 @@ export const ReportsPage = () => {
     return (
         <div>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row', 
+                justifyContent: 'space-between', 
+                alignItems: isMobile ? 'flex-start' : 'center', 
+                gap: 16,
+                marginBottom: 24 
+            }}>
                 <div>
-                    <Title level={2} style={{ margin: 0 }}>📊 Reportes</Title>
+                    <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>📊 Reportes</Title>
                     <Text type="secondary">Analiza rendimiento y exporta datos del periodo seleccionado</Text>
                 </div>
                 <RangePicker
@@ -152,7 +161,7 @@ export const ReportsPage = () => {
                         if (vals?.[0] && vals?.[1]) setDateRange([vals[0], vals[1]]);
                     }}
                     format="DD/MM/YYYY"
-                    style={{ borderRadius: 8 }}
+                    style={{ borderRadius: 8, width: isMobile ? '100%' : 'auto' }}
                 />
             </div>
 
