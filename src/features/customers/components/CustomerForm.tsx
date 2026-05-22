@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Drawer, Form, Input, Select, Button, InputNumber, Row, Col, Space, Divider, Switch, Tabs, Timeline, Card, Tag } from 'antd';
+import { Drawer, Form, Input, Select, Button, InputNumber, Row, Col, Space, Divider, Switch, Tabs, Timeline, Card, Tag, theme } from 'antd';
 import { Customer, Order } from '../../../types';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import dayjs from 'dayjs';
@@ -19,6 +19,7 @@ const { TextArea } = Input;
 export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }: CustomerFormProps) => {
     const [form] = Form.useForm();
     const isMobile = useIsMobile();
+    const { token } = theme.useToken();
 
     const { data: orders } = useFirestoreSubscription<Order>('orders');
 
@@ -228,13 +229,13 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                         label: 'Muro Histórico',
                         children: (
                             <div style={{ padding: '16px 0' }}>
-                                <Card size="small" style={{ marginBottom: 24, borderRadius: 12, border: 'none', background: '#fcfcfc', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <Card size="small" style={{ marginBottom: 24, borderRadius: 12, border: 'none', background: token.colorFillAlter, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                                     <Row gutter={16} align="middle">
                                         <Col span={12} style={{ textAlign: 'center' }}>
                                             <div style={{ fontSize: 12, color: 'gray' }}>Pedidos</div>
                                             <div style={{ fontSize: 20, fontWeight: 'bold' }}>{customerOrders.length}</div>
                                         </Col>
-                                        <Col span={12} style={{ textAlign: 'center', borderLeft: '1px solid #f0f0f0' }}>
+                                        <Col span={12} style={{ textAlign: 'center', borderLeft: `1px solid ${token.colorBorderSecondary}` }}>
                                             <div style={{ fontSize: 12, color: 'gray' }}>Ticket Histórico</div>
                                             <div style={{ fontSize: 20, fontWeight: 'bold' }}>${customerOrders.reduce((sum, o) => sum + (o.total || 0), 0).toFixed(2)}</div>
                                         </Col>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker } from 'antd';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, theme } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
@@ -24,6 +24,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const { useBreakpoint } = Grid;
     const screens = useBreakpoint();
     const isMobile = screens.md === false;
+    const { token } = theme.useToken();
 
     // Catalogs & Data
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
@@ -235,7 +236,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     {(fields, { add, remove }) => (
                         <>
                             {fields.map(({ key, name, ...restField }, index) => (
-                                <div key={key} style={{ background: '#fafafa', padding: '16px 16px 0', marginBottom: 16, borderRadius: 8, border: '1px solid #f0f0f0', position: 'relative' }}>
+                                <div key={key} style={{ background: token.colorFillAlter, padding: '16px 16px 0', marginBottom: 16, borderRadius: 8, border: `1px solid ${token.colorBorderSecondary}`, position: 'relative' }}>
                                     <Row gutter={16}>
                                         <Col xs={24} md={8}>
                                             <Form.Item {...restField} name={[name, 'productId']} label="Producto" rules={[{ required: true }]}>
@@ -343,7 +344,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                         </Form.Item>
                     </Col>
                     <Col xs={24} md={8}>
-                        <div style={{ padding: '30px 0', color: 'red' }}>
+                        <div style={{ padding: '30px 0', color: token.colorError }}>
                             Descuento Final: -${totals.discount.toFixed(2)}
                         </div>
                     </Col>
@@ -362,7 +363,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     </Col>
                 </Row>
 
-                <div style={{ background: '#fafafa', padding: 16, borderRadius: 8, marginBottom: 24, textAlign: 'right' }}>
+                <div style={{ background: token.colorFillAlter, padding: 16, borderRadius: 8, marginBottom: 24, textAlign: 'right' }}>
                     <Typography.Title level={3} style={{ margin: 0 }}>
                         Total: ${totals.total.toFixed(2)}
                     </Typography.Title>
