@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Divider, Row, Col, Skeleton, theme } from 'antd';
+import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Row, Col, Skeleton, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined, CalculatorOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
-import { InventoryItem, Order } from '../../types';
+import { InventoryItem, Order, Recipe, Ingredient } from '../../types';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { explodedIngredientsForOrders } from '../../utils/costHelpers';
 
 const { Title, Text } = Typography;
 
@@ -79,7 +80,17 @@ function InventoryList({ items, onEdit, onDelete, onMovement }: {
 
 // ─── Planning Calculator ─────────────────────────────────────────────────────
 
-function PlanningCalculator({ items, orders }: { items: InventoryItem[]; orders: Order[] }) {
+function PlanningCalculator({ 
+    items, 
+    orders,
+    recipes,
+    ingredients
+}: { 
+    items: InventoryItem[]; 
+    orders: Order[];
+    recipes: Recipe[];
+    ingredients: Ingredient[];
+}) {
     const activeOrders = orders.filter(o => o.status !== 'Entregado' && o.status !== 'Cancelado');
 
     const suggestions = useMemo(() => {
@@ -91,30 +102,69 @@ function PlanningCalculator({ items, orders }: { items: InventoryItem[]; orders:
         }));
     }, [items]);
 
+    const neededIngredients = useMemo(() => {
+        return explodedIngredientsForOrders(activeOrders, recipes, ingredients);
+    }, [activeOrders, recipes, ingredients]);
+
     return (
-        <Card>
-            <Title level={4}><CalculatorOutlined /> Planificación de Compras</Title>
-            <Text type="secondary">
-                Items por debajo del mínimo • {activeOrders.length} pedido(s) activos en preparación
-            </Text>
-            <Divider />
-            {suggestions.length === 0 ? (
-                <Text type="success">✅ Todo el inventario está por encima del nivel mínimo</Text>
-            ) : (
-                <AntList
-                    dataSource={suggestions}
-                    renderItem={s => (
-                        <AntList.Item>
-                            <AntList.Item.Meta
-                                title={s.name}
-                                description={`Stock: ${s.currentStock} / Mín: ${s.minimum}`}
-                            />
-                            <Tag color="red">Comprar al menos {s.deficit}</Tag>
-                        </AntList.Item>
+        <Row gutter={[24, 24]}>
+            <Col xs={24} md={12}>
+                <Card title={<><CalculatorOutlined /> Faltantes de Inventario (Compras Urgentes)</>} bordered={false} style={{ borderRadius: 12 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                        Items que están por debajo de su stock de seguridad establecido.
+                    </Text>
+                    {suggestions.length === 0 ? (
+                        <Text type="success">✅ Todo el inventario está por encima del nivel mínimo</Text>
+                    ) : (
+                        <AntList
+                            dataSource={suggestions}
+                            renderItem={s => (
+                                <AntList.Item>
+                                    <AntList.Item.Meta
+                                        title={s.name}
+                                        description={`Stock: ${s.currentStock} / Mín: ${s.minimum}`}
+                                    />
+                                    <Tag color="red">Comprar al menos {s.deficit}</Tag>
+                                </AntList.Item>
+                            )}
+                        />
                     )}
-                />
-            )}
-        </Card>
+                </Card>
+            </Col>
+            <Col xs={24} md={12}>
+                <Card title={<><CalculatorOutlined /> Explosión de Insumos (Producción Activa)</>} bordered={false} style={{ borderRadius: 12 }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                        Materia prima necesaria para producir los {activeOrders.length} pedido(s) activos.
+                    </Text>
+                    {neededIngredients.length === 0 ? (
+                        <Text type="success">✅ No hay pedidos activos en cola de preparación</Text>
+                    ) : (
+                        <AntList
+                            dataSource={neededIngredients}
+                            renderItem={s => {
+                                const invItem = items.find(i => i.name.toLowerCase() === s.name.toLowerCase());
+                                const stockMsg = invItem 
+                                    ? `Stock: ${invItem.stockPackages} pq. (${invItem.stockPackages * (invItem.packageSize || 1)} ${s.unit})`
+                                    : 'Sin enlace en inventario';
+                                return (
+                                    <AntList.Item>
+                                        <AntList.Item.Meta
+                                            title={<span style={{ fontWeight: 600 }}>{s.name}</span>}
+                                            description={stockMsg}
+                                        />
+                                        <div>
+                                            <Tag color="blue" style={{ fontSize: 13, padding: '4px 8px' }}>
+                                                Necesario: {s.qty.toLocaleString('es-MX', { maximumFractionDigits: 2 })} {s.unit}
+                                            </Tag>
+                                        </div>
+                                    </AntList.Item>
+                                );
+                            }}
+                        />
+                    )}
+                </Card>
+            </Col>
+        </Row>
     );
 }
 
@@ -123,6 +173,8 @@ function PlanningCalculator({ items, orders }: { items: InventoryItem[]; orders:
 export const InventoryPage = () => {
     const { data: items, loading } = useFirestoreSubscription<InventoryItem>('inventory');
     const { data: orders } = useFirestoreSubscription<Order>('orders');
+    const { data: recipes } = useFirestoreSubscription<Recipe>('recipes');
+    const { data: ingredients } = useFirestoreSubscription<Ingredient>('ingredients');
     const { add, update, softDelete } = useFirestoreMutation('inventory');
     const movementsMutation = useFirestoreMutation('inventory_movements');
 
@@ -239,7 +291,7 @@ export const InventoryPage = () => {
         {
             key: 'planning',
             label: '🧮 Planificación',
-            children: <PlanningCalculator items={items} orders={orders} />,
+            children: <PlanningCalculator items={items} orders={orders} recipes={recipes} ingredients={ingredients} />,
         },
     ];
 

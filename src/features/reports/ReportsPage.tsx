@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag, theme } from 'antd';
+import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag, Table, theme } from 'antd';
 import {
     FileExcelOutlined,
     FilePdfOutlined,
@@ -18,9 +18,10 @@ import {
 } from 'recharts';
 import dayjs from 'dayjs';
 import { useFirestoreSubscription } from '../../hooks/useFirestore';
-import { Order, Customer, Recipe, Ingredient } from '../../types';
+import { Order, Customer, Recipe, Ingredient, Product } from '../../types';
 import { getDeliveredOrdersInRange } from '../../utils/dateHelpers';
 import { computeDemographics } from '../../utils/demographicsHelpers';
+import { findRecipeForProduct, calculateCostPerServing } from '../../utils/costHelpers';
 import {
     exportOrdersExcel,
     exportOrdersPDF,
@@ -40,6 +41,7 @@ export const ReportsPage = () => {
     const { data: customers } = useFirestoreSubscription<Customer>('customers');
     const { data: recipes } = useFirestoreSubscription<Recipe>('recipes');
     const { data: ingredients } = useFirestoreSubscription<Ingredient>('ingredients');
+    const { data: products } = useFirestoreSubscription<Product>('catalog_products');
 
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
         dayjs().startOf('month'),
@@ -55,6 +57,49 @@ export const ReportsPage = () => {
         () => computeDemographics(customers, filteredOrders),
         [customers, filteredOrders]
     );
+
+    const productProfitability = useMemo(() => {
+        if (!products.length) return [];
+
+        const unitsSoldMap: Record<string, number> = {};
+        filteredOrders.forEach(o => {
+            if (o.items && o.items.length > 0) {
+                o.items.forEach(item => {
+                    if (item.productId) {
+                        unitsSoldMap[item.productId] = (unitsSoldMap[item.productId] || 0) + item.quantity;
+                    }
+                });
+            } else if (o.productId && o.productNameAtSale) {
+                unitsSoldMap[o.productId] = (unitsSoldMap[o.productId] || 0) + (o.quantity || 1);
+            }
+        });
+
+        return products.filter(p => p.isActive).map(product => {
+            const matchedRecipe = findRecipeForProduct(product.id, undefined, product.name, undefined, recipes);
+            
+            let cost = 0;
+            if (matchedRecipe) {
+                cost = calculateCostPerServing(matchedRecipe, ingredients);
+            }
+
+            const price = product.price || 0;
+            const margin = price - cost;
+            const marginPercent = price > 0 ? (margin / price) * 100 : 0;
+            const qtySold = unitsSoldMap[product.id] || 0;
+            const totalProfitContribution = margin * qtySold;
+
+            return {
+                key: product.id,
+                name: product.name,
+                price,
+                cost,
+                margin,
+                marginPercent,
+                qtySold,
+                totalProfitContribution
+            };
+        }).sort((a, b) => b.totalProfitContribution - a.totalProfitContribution);
+    }, [products, filteredOrders, recipes, ingredients]);
 
     const totalSales = filteredOrders.reduce((a, o) => a + (o.total || 0), 0);
     const avgTicket = filteredOrders.length > 0 ? totalSales / filteredOrders.length : 0;
@@ -362,6 +407,75 @@ export const ReportsPage = () => {
                     />
                 </Card>
             )}
+
+            <Divider orientation="left"><DollarOutlined /> Rentabilidad de Productos</Divider>
+            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 24 }}>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                    Análisis de precios de catálogo contra costos teóricos de recetas e impacto en ganancia del periodo seleccionado.
+                </Text>
+                <Table
+                    dataSource={productProfitability}
+                    size="small"
+                    pagination={{ pageSize: 8 }}
+                    scroll={{ x: true }}
+                    columns={[
+                        {
+                            title: 'Producto',
+                            dataIndex: 'name',
+                            key: 'name',
+                            render: (text) => <span style={{ fontWeight: 600 }}>{text}</span>
+                        },
+                        {
+                            title: 'Precio Venta',
+                            dataIndex: 'price',
+                            key: 'price',
+                            render: (val: number) => `$${val.toFixed(2)}`
+                        },
+                        {
+                            title: 'Costo Insumos',
+                            dataIndex: 'cost',
+                            key: 'cost',
+                            render: (val: number) => val > 0 ? `$${val.toFixed(2)}` : <span style={{ color: colorTextSecondary, fontSize: 12 }}>Sin Receta</span>
+                        },
+                        {
+                            title: 'Margen Unitario',
+                            dataIndex: 'margin',
+                            key: 'margin',
+                            render: (val: number, record) => record.cost > 0 ? (
+                                <span style={{ color: val > 0 ? '#10b981' : '#ef4444', fontWeight: 500 }}>
+                                    ${val.toFixed(2)}
+                                </span>
+                            ) : '-'
+                        },
+                        {
+                            title: '% Margen',
+                            dataIndex: 'marginPercent',
+                            key: 'marginPercent',
+                            render: (val: number, record) => record.cost > 0 ? (
+                                <Tag color={val >= 30 ? 'green' : 'orange'}>
+                                    {val.toFixed(1)}%
+                                </Tag>
+                            ) : '-'
+                        },
+                        {
+                            title: 'Cant. Vendida',
+                            dataIndex: 'qtySold',
+                            key: 'qtySold',
+                            render: (val: number) => <span style={{ fontWeight: 500 }}>{val} un.</span>
+                        },
+                        {
+                            title: 'Contribución Utilidad',
+                            dataIndex: 'totalProfitContribution',
+                            key: 'totalProfitContribution',
+                            render: (val: number, record) => record.cost > 0 ? (
+                                <span style={{ fontWeight: 700, color: val > 0 ? '#10b981' : 'inherit' }}>
+                                    ${val.toFixed(2)}
+                                </span>
+                            ) : '-'
+                        }
+                    ]}
+                />
+            </Card>
         </div>
     );
 };
