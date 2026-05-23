@@ -17,6 +17,7 @@ import {
     PlusOutlined,
     BookOutlined,
     PieChartOutlined,
+    CompassOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthGate';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -40,8 +41,9 @@ export const AppLayout = () => {
         token: { colorBgContainer, borderRadiusLG, colorBorderSecondary, colorPrimary },
     } = theme.useToken();
 
-    const menuItems = [
+    const allMenuItems = [
         { key: '/', icon: <AppstoreOutlined />, label: 'Dashboard' },
+        { key: '/roadmap', icon: <CompassOutlined />, label: 'Roadmap' },
         { key: '/customers', icon: <UserOutlined />, label: 'Clientes' },
         { key: '/orders', icon: <ShoppingOutlined />, label: 'Pedidos' },
         { key: '/inventory', icon: <InboxOutlined />, label: 'Inventario' },
@@ -50,6 +52,8 @@ export const AppLayout = () => {
         { key: '/behavior', icon: <PieChartOutlined />, label: 'Comportamiento' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Configuración' },
     ];
+
+    const menuItems = allMenuItems.filter(item => isMobile ? item.key !== '/roadmap' : true);
 
     const mobileTabItems = [
         menuItems.find(i => i.key === '/'), // Dashboard
