@@ -176,3 +176,58 @@ export interface Recipe extends BaseEntity {
     linkedFlavorId?: string; // ID of the flavor from Settings this recipe belongs to
 }
 
+// --- B2B Delivery Schedules ---
+
+export type DayOfWeek = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
+
+export const DAYS_OF_WEEK: DayOfWeek[] = [
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo',
+];
+
+/** Maps JS Date.getDay() (0=Sunday) to our DayOfWeek */
+export const JS_DAY_TO_DAY_OF_WEEK: Record<number, DayOfWeek> = {
+    0: 'Domingo',
+    1: 'Lunes',
+    2: 'Martes',
+    3: 'Miércoles',
+    4: 'Jueves',
+    5: 'Viernes',
+    6: 'Sábado',
+};
+
+/** Contacto adicional de un negocio B2B */
+export interface B2BContact {
+    name: string;
+    role?: string;
+    phone: string;
+    isWhatsApp?: boolean;
+    isPrimary?: boolean;
+}
+
+/** Programación de entrega recurrente para un negocio B2B */
+export interface B2BDeliverySchedule extends BaseEntity {
+    customerId: string;
+    customerName: string;
+
+    // Programación
+    deliveryDays: DayOfWeek[];
+    preferredTime?: string;
+
+    // Contactos del negocio (múltiples)
+    contacts: B2BContact[];
+
+    // Logística
+    deliveryAddress?: string;
+    deliveryNotes?: string;
+
+    // Notas generales
+    notes?: string;
+
+    // Estado
+    isActive: boolean;
+
+    // Fechas en las que se ha omitido la notificación (formato YYYY-MM-DD)
+    dismissedDates?: string[];
+}
+
+
