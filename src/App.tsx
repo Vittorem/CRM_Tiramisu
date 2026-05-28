@@ -6,6 +6,7 @@ import esES from 'antd/locale/es_ES';
 import { AuthGate } from './components/auth/AuthGate';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLayout } from './components/layout/AppLayout';
+import { LicenseProvider } from './contexts/LicenseContext';
 
 import { SettingsPage } from './features/settings/SettingsPage';
 import { CustomerList } from './features/customers/CustomerList';
@@ -17,6 +18,7 @@ import { RecetarioPage } from './features/recetario/RecetarioPage';
 import { BehaviorPage } from './features/behavior/BehaviorPage';
 import { RoadmapPage } from './features/roadmap/RoadmapPage';
 import { B2BDeliveriesPage } from './features/b2b-deliveries/B2BDeliveriesPage';
+import { AdminPage } from './features/admin/AdminPage';
 
 const queryClient = new QueryClient();
 
@@ -59,15 +61,15 @@ function App() {
                 theme={{
                     algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
                     token: {
-                        colorPrimary: '#db2777', // Vibrant Wildberry Rose - elegant general pastry palette
+                        colorPrimary: '#db2777',
                         colorInfo: '#db2777',
-                        borderRadius: 12, // Softer curves for premium feel
+                        borderRadius: 12,
                         fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
                         controlHeight: 40,
                         controlHeightLG: 48,
-                        fontSize: 14, // Standard CRM font size for better density
-                        boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)', // Soft diffuse shadows
-                        colorBgBase: isDarkMode ? '#1a0f12' : '#fff5f6', // Sweet vanilla light cream / elegant plum dark
+                        fontSize: 14,
+                        boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)',
+                        colorBgBase: isDarkMode ? '#1a0f12' : '#fff5f6',
                     },
                     components: {
                         Card: {
@@ -83,23 +85,26 @@ function App() {
                 <QueryClientProvider client={queryClient}>
                     <ErrorBoundary>
                         <AuthGate>
-                            <BrowserRouter>
-                                <Routes>
-                                    <Route path="/" element={<AppLayout />}>
-                                        <Route index element={<DashboardPage />} />
-                                        <Route path="customers" element={<CustomerList />} />
-                                        <Route path="orders" element={<OrdersPage />} />
-                                        <Route path="b2b-deliveries" element={<B2BDeliveriesPage />} />
-                                        <Route path="reports" element={<ReportsPage />} />
-                                        <Route path="behavior" element={<BehaviorPage />} />
-                                        <Route path="inventory" element={<InventoryPage />} />
-                                        <Route path="recetario" element={<RecetarioPage />} />
-                                        <Route path="roadmap" element={<RoadmapPage />} />
-                                        <Route path="settings" element={<SettingsPage />} />
-                                        <Route path="*" element={<Navigate to="/" replace />} />
-                                    </Route>
-                                </Routes>
-                            </BrowserRouter>
+                            <LicenseProvider>
+                                <BrowserRouter>
+                                    <Routes>
+                                        <Route path="/" element={<AppLayout />}>
+                                            <Route index element={<DashboardPage />} />
+                                            <Route path="customers" element={<CustomerList />} />
+                                            <Route path="orders" element={<OrdersPage />} />
+                                            <Route path="b2b-deliveries" element={<B2BDeliveriesPage />} />
+                                            <Route path="reports" element={<ReportsPage />} />
+                                            <Route path="behavior" element={<BehaviorPage />} />
+                                            <Route path="inventory" element={<InventoryPage />} />
+                                            <Route path="recetario" element={<RecetarioPage />} />
+                                            <Route path="roadmap" element={<RoadmapPage />} />
+                                            <Route path="settings" element={<SettingsPage />} />
+                                            <Route path="admin" element={<AdminPage />} />
+                                            <Route path="*" element={<Navigate to="/" replace />} />
+                                        </Route>
+                                    </Routes>
+                                </BrowserRouter>
+                            </LicenseProvider>
                         </AuthGate>
                     </ErrorBoundary>
                 </QueryClientProvider>

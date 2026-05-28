@@ -19,21 +19,41 @@ import {
     PieChartOutlined,
     CompassOutlined,
     SendOutlined,
+    CrownOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthGate';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTheme } from '../../App';
 import { GlobalAlerts } from './GlobalAlerts';
+import { useLicense } from '../../contexts/LicenseContext';
+import { LicenseStatusBanner } from '../licensing/LicenseStatusBanner';
+import { FeatureGuard } from '../licensing/FeatureGuard';
+import { PaywallOverlay } from '../licensing/PaywallOverlay';
 
 const { Header, Sider, Content } = Layout;
+
+/** Labels for feature guard tooltips per route. */
+const FEATURE_LABELS: Record<string, string> = {
+    '/': 'Dashboard con KPIs y gráficas',
+    '/customers': 'Gestión de clientes B2C y B2B',
+    '/orders': 'Sistema de pedidos con Kanban',
+    '/b2b-deliveries': 'Gestión de entregas B2B',
+    '/inventory': 'Control de inventario',
+    '/recetario': 'Recetario con costeo automático',
+    '/reports': 'Reportes avanzados',
+    '/behavior': 'Análisis de comportamiento',
+    '/roadmap': 'Roadmap del producto',
+    '/settings': 'Configuración de catálogos',
+};
 
 export const AppLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [paywallOpen, setPaywallOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-
+    const { isAdmin, isAuthorized } = useLicense();
 
     const isMobile = useIsMobile();
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -53,6 +73,10 @@ export const AppLayout = () => {
         { key: '/reports', icon: <BarChartOutlined />, label: 'Reportes' },
         { key: '/behavior', icon: <PieChartOutlined />, label: 'Comportamiento' },
         { key: '/settings', icon: <SettingOutlined />, label: 'Configuración' },
+        // Admin menu item — only shown to the admin
+        ...(isAdmin
+            ? [{ key: '/admin', icon: <CrownOutlined />, label: 'Admin' }]
+            : []),
     ];
 
     const menuItems = allMenuItems.filter(item => isMobile ? item.key !== '/roadmap' : true);
@@ -73,6 +97,11 @@ export const AppLayout = () => {
             },
         ],
     };
+
+    // Determine if current route should be guarded
+    const currentFeatureLabel = FEATURE_LABELS[location.pathname] || '';
+    const isAdminRoute = location.pathname === '/admin';
+    const shouldGuard = !isAuthorized && !isAdminRoute && currentFeatureLabel;
 
     return (
         <Layout style={{ minHeight: '100vh', paddingBottom: isMobile ? 65 : 0, overflowX: 'hidden' }}>
@@ -147,6 +176,9 @@ export const AppLayout = () => {
                     </div>
                 </Header>
 
+                {/* License status banner */}
+                <LicenseStatusBanner onActivate={() => setPaywallOpen(true)} />
+
                 <Content
                     style={{
                         margin: isMobile ? '12px' : '16px',
@@ -158,7 +190,16 @@ export const AppLayout = () => {
                         flexDirection: 'column',
                     }}
                 >
-                    <Outlet />
+                    {shouldGuard ? (
+                        <FeatureGuard
+                            featureLabel={currentFeatureLabel}
+                            onLockedClick={() => setPaywallOpen(true)}
+                        >
+                            <Outlet />
+                        </FeatureGuard>
+                    ) : (
+                        <Outlet />
+                    )}
                 </Content>
             </Layout>
 
@@ -175,7 +216,13 @@ export const AppLayout = () => {
                     {/* FAB (Floating Action Button): Create New Order */}
                     <div style={{ width: '20%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', height: 44 }}>
                         <div
-                            onClick={() => navigate('/orders', { state: { createNew: true } })}
+                            onClick={() => {
+                                if (!isAuthorized && !isAdmin) {
+                                    setPaywallOpen(true);
+                                    return;
+                                }
+                                navigate('/orders', { state: { createNew: true } });
+                            }}
                             style={{
                                 position: 'absolute',
                                 top: -24,
@@ -238,6 +285,12 @@ export const AppLayout = () => {
                     )}
                 />
             </Drawer>
+
+            {/* Paywall modal */}
+            <PaywallOverlay
+                visible={paywallOpen}
+                onDismiss={() => setPaywallOpen(false)}
+            />
         </Layout>
     );
 };

@@ -5,6 +5,7 @@ import { Spin } from 'antd';
 import { LoginPage } from './LoginPage';
 import { RegisterPage } from './RegisterPage';
 import { EmailVerificationPending } from './EmailVerificationPending';
+import { ensureLicenseExists } from '../../services/licenseService';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
 
@@ -45,6 +46,16 @@ export const AuthGate = ({ children }: AuthGateProps) => {
         });
         return () => unsubscribe();
     }, []);
+
+    // Ensure a license document exists for every verified user.
+    // Runs once after the user is confirmed authenticated & verified.
+    useEffect(() => {
+        if (user && user.emailVerified) {
+            ensureLicenseExists(user).catch((err) =>
+                console.error('Failed to ensure license:', err),
+            );
+        }
+    }, [user?.uid, user?.emailVerified]);
 
     const logout = () => signOut(auth);
 
