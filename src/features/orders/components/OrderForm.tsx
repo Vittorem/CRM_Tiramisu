@@ -42,38 +42,59 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
 
     const prefillCustomerData = (customerId: string) => {
-        const customer = customers.find(c => c.id === customerId);
-        if (!customer) return;
+        try {
+            console.log('Prefilling customer data for ID:', customerId);
+            const customer = customers.find(c => c.id === customerId);
+            console.log('Found customer:', customer);
+            if (!customer) return;
 
-        const updates: Record<string, any> = {};
+            const updates: Record<string, any> = {};
 
-        // 1. Prefill Sale Channel based on mainContactMethod or type
-        let matchedChannel;
-        if (customer.type === 'B2B') {
-            matchedChannel = channels.find(
-                c => c.name.toLowerCase().includes('b2b') || c.name.toLowerCase().includes('mayoreo')
-            );
-        }
-        if (!matchedChannel && customer.mainContactMethod) {
-            matchedChannel = channels.find(
-                c => c.name.toLowerCase().includes(customer.mainContactMethod.toLowerCase())
-            );
-        }
-        if (matchedChannel) {
-            updates.channelId = matchedChannel.id;
-        }
+            // 1. Prefill Sale Channel based on type or mainContactMethod
+            let matchedChannel;
+            const customerTypeUpper = String(customer.type || 'B2C').toUpperCase();
+            
+            if (customerTypeUpper === 'B2B') {
+                matchedChannel = channels.find(
+                    c => c.name.toLowerCase().includes('b2b') || c.name.toLowerCase().includes('mayoreo')
+                );
+            } else {
+                // Look for B2C, menudeo or publico general channels
+                matchedChannel = channels.find(
+                    c => c.name.toLowerCase().includes('b2c') || 
+                         c.name.toLowerCase().includes('menudeo') || 
+                         c.name.toLowerCase().includes('público') || 
+                         c.name.toLowerCase().includes('publico')
+                );
+            }
 
-        // 2. Prefill Delivery Method based on customer type
-        if (customer.type === 'B2B') {
-            updates.deliveryMethod = 'Envío';
-            updates.shippingCost = 0;
-        } else {
-            // Default to B2C behavior if type is 'B2C' or missing
-            updates.deliveryMethod = 'Recoge';
-            updates.shippingCost = 0;
-        }
+            // Fallback to mainContactMethod if channel not matched by type yet
+            if (!matchedChannel && customer.mainContactMethod) {
+                matchedChannel = channels.find(
+                    c => c.name.toLowerCase().includes(customer.mainContactMethod.toLowerCase())
+                );
+            }
 
-        form.setFieldsValue(updates);
+            if (matchedChannel) {
+                updates.channelId = matchedChannel.id;
+                console.log('Matched channel:', matchedChannel);
+            }
+
+            // 2. Prefill Delivery Method based on customer type
+            if (customerTypeUpper === 'B2B') {
+                updates.deliveryMethod = 'Envío';
+                updates.shippingCost = 0;
+            } else {
+                // Default to B2C behavior if type is 'B2C' or missing
+                updates.deliveryMethod = 'Recoge';
+                updates.shippingCost = 0;
+            }
+
+            console.log('Applying updates:', updates);
+            form.setFieldsValue(updates);
+        } catch (err) {
+            console.error('Error in prefillCustomerData:', err);
+        }
     };
 
     useEffect(() => {
@@ -278,10 +299,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false}>
                 <Row gutter={16}>
                     <Col xs={24} md={12}>
-                        <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={selectedCustomer.type === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{selectedCustomer.type || 'B2C'}</Tag>}</span>} rules={[{ required: true }]}>
+                        <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={String(selectedCustomer.type || 'B2C').toUpperCase() === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{String(selectedCustomer.type || 'B2C').toUpperCase()}</Tag>}</span>} rules={[{ required: true }]}>
                             <Select showSearch optionFilterProp="children" placeholder="Selecciona Cliente">
                                 {customers.filter(c => c.isActive !== false).map(c => (
-                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({c.type || 'B2C'})</Option>
+                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({String(c.type || 'B2C').toUpperCase()})</Option>
                                 ))}
                             </Select>
                         </Form.Item>
