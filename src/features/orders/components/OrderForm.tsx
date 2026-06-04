@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, theme } from 'antd';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, Checkbox, theme } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
@@ -20,6 +20,9 @@ const { TextArea } = Input;
 
 export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, prefillCustomerId }: OrderFormProps) => {
     const [form] = Form.useForm();
+    const deliveryMethod = Form.useWatch('deliveryMethod', form);
+    const hasDiscount = Form.useWatch('hasDiscount', form);
+    const hasExtraCharges = Form.useWatch('hasExtraCharges', form);
 
     const { useBreakpoint } = Grid;
     const screens = useBreakpoint();
@@ -33,6 +36,40 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
+
+    const prefillCustomerData = (customerId: string) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        const updates: Record<string, any> = {};
+
+        // 1. Prefill Sale Channel based on mainContactMethod or type
+        let matchedChannel;
+        if (customer.type === 'B2B') {
+            matchedChannel = channels.find(
+                c => c.name.toLowerCase().includes('b2b') || c.name.toLowerCase().includes('mayoreo')
+            );
+        }
+        if (!matchedChannel && customer.mainContactMethod) {
+            matchedChannel = channels.find(
+                c => c.name.toLowerCase().includes(customer.mainContactMethod.toLowerCase())
+            );
+        }
+        if (matchedChannel) {
+            updates.channelId = matchedChannel.id;
+        }
+
+        // 2. Prefill Delivery Method based on customer type
+        if (customer.type === 'B2C') {
+            updates.deliveryMethod = 'Recoge';
+            updates.shippingCost = 0;
+        } else if (customer.type === 'B2B') {
+            updates.deliveryMethod = 'Envío';
+            updates.shippingCost = 0;
+        }
+
+        form.setFieldsValue(updates);
+    };
 
     useEffect(() => {
         if (open) {
@@ -62,6 +99,8 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     deliveryDate,
                     deliveryTime: deliveryDate,
                     items: initialItems,
+                    hasDiscount: (initialValues.discountValue || 0) > 0,
+                    hasExtraCharges: (initialValues.extraCharges || 0) > 0,
                 });
                 calculateTotals(form.getFieldsValue());
             } else {
@@ -76,8 +115,13 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     discountType: 'AMOUNT',
                     deliveryDate: dayjs(),
                     deliveryTime: dayjs(),
+                    hasDiscount: false,
+                    hasExtraCharges: false,
                     ...(prefillCustomerId ? { customerId: prefillCustomerId } : {}),
                 });
+                if (prefillCustomerId) {
+                    prefillCustomerData(prefillCustomerId);
+                }
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,9 +129,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
     const calculateTotals = (values: Record<string, any>) => {
         const items = values.items || [];
-        const shipping = (values.shippingCost as number) || 0;
-        const extra = (values.extraCharges as number) || 0;
-        const discountVal = (values.discountValue as number) || 0;
+        const isShipping = values.deliveryMethod === 'Envío';
+        const shipping = isShipping ? ((values.shippingCost as number) || 0) : 0;
+        const extra = values.hasExtraCharges ? ((values.extraCharges as number) || 0) : 0;
+        const discountVal = values.hasDiscount ? ((values.discountValue as number) || 0) : 0;
         const discountType = (values.discountType as string) || 'AMOUNT';
 
         let subtotal = 0;
@@ -123,8 +168,20 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
         }
     };
 
-    const onValuesChange = (_: unknown, allValues: Record<string, unknown>) => {
-        calculateTotals(allValues);
+    const onValuesChange = (changedValues: Record<string, any>) => {
+        if ('customerId' in changedValues) {
+            prefillCustomerData(changedValues.customerId);
+        }
+        if ('deliveryMethod' in changedValues && changedValues.deliveryMethod === 'Recoge') {
+            form.setFieldsValue({ shippingCost: 0 });
+        }
+        if ('hasDiscount' in changedValues && !changedValues.hasDiscount) {
+            form.setFieldsValue({ discountValue: 0 });
+        }
+        if ('hasExtraCharges' in changedValues && !changedValues.hasExtraCharges) {
+            form.setFieldsValue({ extraCharges: 0, extraChargesReason: '' });
+        }
+        calculateTotals(form.getFieldsValue());
     };
 
     const handleFinish = async () => {
@@ -154,7 +211,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
             const finalDate = values.deliveryDate.hour(values.deliveryTime ? values.deliveryTime.hour() : 0).minute(values.deliveryTime ? values.deliveryTime.minute() : 0).toDate();
 
-            const { deliveryTime, ...restValues } = values as Record<string, any>;
+            const { deliveryTime, hasDiscount, hasExtraCharges, ...restValues } = values as Record<string, any>;
 
             const payload: Partial<Order> = {
                 ...restValues,
@@ -170,6 +227,11 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 subtotal: totals.subtotal,
                 discountAmount: totals.discount,
                 total: totals.total,
+                shippingCost: values.deliveryMethod === 'Envío' ? (values.shippingCost || 0) : 0,
+                discountValue: values.hasDiscount ? (values.discountValue || 0) : 0,
+                discountType: values.hasDiscount ? (values.discountType || 'AMOUNT') : 'AMOUNT',
+                extraCharges: values.hasExtraCharges ? (values.extraCharges || 0) : 0,
+                extraChargesReason: values.hasExtraCharges ? (values.extraChargesReason || '') : '',
             };
 
             await onSubmit(payload);
@@ -322,46 +384,68 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                             </Radio.Group>
                         </Form.Item>
                     </Col>
-                    <Col xs={24} md={8}>
-                        <Form.Item name="shippingCost" label="Costo Envío">
-                            <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
+                    {deliveryMethod === 'Envío' && (
+                        <Col xs={24} md={8}>
+                            <Form.Item name="shippingCost" label="Costo Envío">
+                                <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    )}
+                </Row>
+
+                <Row gutter={16}>
+                    <Col xs={24}>
+                        <Form.Item name="hasDiscount" valuePropName="checked" style={{ marginBottom: 12 }}>
+                            <Checkbox>Tiene un descuento</Checkbox>
                         </Form.Item>
                     </Col>
                 </Row>
 
+                {hasDiscount && (
+                    <Row gutter={16}>
+                        <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
+                            <Form.Item name="discountType" label="Tipo Descuento">
+                                <Select>
+                                    <Option value="AMOUNT">Monto ($)</Option>
+                                    <Option value="PERCENT">Porcentaje (%)</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                            <Form.Item name="discountValue" label="Valor Descuento">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                            <div style={{ padding: '30px 0', color: token.colorError }}>
+                                Descuento Final: -${totals.discount.toFixed(2)}
+                            </div>
+                        </Col>
+                    </Row>
+                )}
+
                 <Row gutter={16}>
-                    <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
-                        <Form.Item name="discountType" label="Tipo Descuento">
-                            <Select>
-                                <Option value="AMOUNT">Monto ($)</Option>
-                                <Option value="PERCENT">Porcentaje (%)</Option>
-                            </Select>
+                    <Col xs={24}>
+                        <Form.Item name="hasExtraCharges" valuePropName="checked" style={{ marginBottom: 12 }}>
+                            <Checkbox>Tiene cargos adicionales</Checkbox>
                         </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <Form.Item name="discountValue" label="Valor Descuento">
-                            <InputNumber min={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <div style={{ padding: '30px 0', color: token.colorError }}>
-                            Descuento Final: -${totals.discount.toFixed(2)}
-                        </div>
                     </Col>
                 </Row>
 
-                <Row gutter={16}>
-                    <Col xs={24} md={8}>
-                        <Form.Item name="extraCharges" label="Cargos Extra">
-                            <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                    </Col>
-                    <Col xs={24} md={16} style={{ display: isMobile ? 'none' : 'block' }}>
-                        <Form.Item name="extraChargesReason" label="Motivo Cargo Extra">
-                            <Input placeholder="Ej. Empaque especial" />
-                        </Form.Item>
-                    </Col>
-                </Row>
+                {hasExtraCharges && (
+                    <Row gutter={16}>
+                        <Col xs={24} md={8}>
+                            <Form.Item name="extraCharges" label="Cargos Extra">
+                                <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={16} style={{ display: isMobile ? 'none' : 'block' }}>
+                            <Form.Item name="extraChargesReason" label="Motivo Cargo Extra">
+                                <Input placeholder="Ej. Empaque especial" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                )}
 
                 <div style={{ background: token.colorFillAlter, padding: 16, borderRadius: 8, marginBottom: 24, textAlign: 'right' }}>
                     <Typography.Title level={3} style={{ margin: 0 }}>
