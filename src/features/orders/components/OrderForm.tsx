@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, Checkbox, theme } from 'antd';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, Checkbox, theme, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
@@ -34,6 +34,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const { data: products } = useFirestoreSubscription<Product>('catalog_products');
     const { data: flavors } = useFirestoreSubscription<Flavor>('catalog_flavors');
     const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
+
+    const customerId = Form.useWatch('customerId', form);
+    const selectedCustomer = customers.find(c => c.id === customerId);
+
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
 
@@ -273,10 +277,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false}>
                 <Row gutter={16}>
                     <Col xs={24} md={12}>
-                        <Form.Item name="customerId" label="Cliente" rules={[{ required: true }]}>
+                        <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={selectedCustomer.type === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{selectedCustomer.type}</Tag>}</span>} rules={[{ required: true }]}>
                             <Select showSearch optionFilterProp="children" placeholder="Selecciona Cliente">
                                 {customers.filter(c => c.isActive !== false).map(c => (
-                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone}</Option>
+                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({c.type})</Option>
                                 ))}
                             </Select>
                         </Form.Item>
@@ -365,13 +369,13 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
                 <Row gutter={16}>
                     <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
-                        <Form.Item label="Fecha y Hora Entrega" required style={{ marginBottom: 0 }}>
+                        <Form.Item label="Fecha y Hora Entrega" required>
                             <Space wrap>
-                                <Form.Item name="deliveryDate" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
-                                    <DatePicker style={{ width: '100%', minWidth: 130 }} format="DD/MM/YYYY" placeholder="Fecha" />
+                                <Form.Item name="deliveryDate" rules={[{ required: true }]} noStyle>
+                                    <DatePicker style={{ width: 130 }} format="DD/MM/YYYY" placeholder="Fecha" />
                                 </Form.Item>
-                                <Form.Item name="deliveryTime" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
-                                    <TimePicker style={{ width: '100%', minWidth: 100 }} format="HH:mm" placeholder="Hora" />
+                                <Form.Item name="deliveryTime" rules={[{ required: true }]} noStyle>
+                                    <TimePicker style={{ width: 100 }} format="HH:mm" placeholder="Hora" />
                                 </Form.Item>
                             </Space>
                         </Form.Item>
@@ -394,58 +398,60 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 </Row>
 
                 <Row gutter={16}>
-                    <Col xs={24}>
-                        <Form.Item name="hasDiscount" valuePropName="checked" style={{ marginBottom: 12 }}>
-                            <Checkbox>Tiene un descuento</Checkbox>
-                        </Form.Item>
+                    <Col xs={24} md={12}>
+                        <div style={{ background: token.colorFillAlter, padding: 16, borderRadius: 8, marginBottom: 16, border: `1px solid ${token.colorBorderSecondary}` }}>
+                            <Form.Item name="hasDiscount" valuePropName="checked" style={{ marginBottom: hasDiscount ? 16 : 0 }}>
+                                <Checkbox style={{ fontWeight: 500 }}>Aplicar Descuento</Checkbox>
+                            </Form.Item>
+                            
+                            {hasDiscount && (
+                                <Row gutter={8}>
+                                    <Col span={12}>
+                                        <Form.Item name="discountType" label="Tipo" style={{ marginBottom: 0 }}>
+                                            <Select>
+                                                <Option value="AMOUNT">Monto ($)</Option>
+                                                <Option value="PERCENT">Porcentaje (%)</Option>
+                                            </Select>
+                                        </Form.Item>
+                                    </Col>
+                                    <Col span={12}>
+                                        <Form.Item name="discountValue" label="Valor" style={{ marginBottom: 0 }}>
+                                            <InputNumber min={0} style={{ width: '100%' }} />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col span={24}>
+                                        <div style={{ marginTop: 8, color: token.colorError, textAlign: 'right', fontWeight: 500 }}>
+                                            Descuento Final: -${totals.discount.toFixed(2)}
+                                        </div>
+                                    </Col>
+                                </Row>
+                            )}
+                        </div>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                        <div style={{ background: token.colorFillAlter, padding: 16, borderRadius: 8, marginBottom: 16, border: `1px solid ${token.colorBorderSecondary}` }}>
+                            <Form.Item name="hasExtraCharges" valuePropName="checked" style={{ marginBottom: hasExtraCharges ? 16 : 0 }}>
+                                <Checkbox style={{ fontWeight: 500 }}>Cargos Adicionales</Checkbox>
+                            </Form.Item>
+
+                            {hasExtraCharges && (
+                                <Row gutter={8}>
+                                    <Col span={10}>
+                                        <Form.Item name="extraCharges" label="Monto" style={{ marginBottom: 0 }}>
+                                            <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col span={14}>
+                                        <Form.Item name="extraChargesReason" label="Motivo" style={{ marginBottom: 0 }}>
+                                            <Input placeholder="Ej. Empaque" />
+                                        </Form.Item>
+                                    </Col>
+                                </Row>
+                            )}
+                        </div>
                     </Col>
                 </Row>
-
-                {hasDiscount && (
-                    <Row gutter={16}>
-                        <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
-                            <Form.Item name="discountType" label="Tipo Descuento">
-                                <Select>
-                                    <Option value="AMOUNT">Monto ($)</Option>
-                                    <Option value="PERCENT">Porcentaje (%)</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={8}>
-                            <Form.Item name="discountValue" label="Valor Descuento">
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={8}>
-                            <div style={{ padding: '30px 0', color: token.colorError }}>
-                                Descuento Final: -${totals.discount.toFixed(2)}
-                            </div>
-                        </Col>
-                    </Row>
-                )}
-
-                <Row gutter={16}>
-                    <Col xs={24}>
-                        <Form.Item name="hasExtraCharges" valuePropName="checked" style={{ marginBottom: 12 }}>
-                            <Checkbox>Tiene cargos adicionales</Checkbox>
-                        </Form.Item>
-                    </Col>
-                </Row>
-
-                {hasExtraCharges && (
-                    <Row gutter={16}>
-                        <Col xs={24} md={8}>
-                            <Form.Item name="extraCharges" label="Cargos Extra">
-                                <InputNumber prefix="$" min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={16} style={{ display: isMobile ? 'none' : 'block' }}>
-                            <Form.Item name="extraChargesReason" label="Motivo Cargo Extra">
-                                <Input placeholder="Ej. Empaque especial" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-                )}
 
                 <div style={{ background: token.colorFillAlter, padding: 16, borderRadius: 8, marginBottom: 24, textAlign: 'right' }}>
                     <Typography.Title level={3} style={{ margin: 0 }}>

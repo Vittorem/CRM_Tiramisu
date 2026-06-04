@@ -1,3 +1,9 @@
+# OS files
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+
 # Logs
 logs
 *.log
@@ -138,3 +144,6 @@ lint_output.txt
 # Claude AI assistant files
 .claude/
 CLAUDE.md
+
+# Google Cloud SDK local installation
+google-cloud-sdk/
