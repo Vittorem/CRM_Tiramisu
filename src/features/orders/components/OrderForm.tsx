@@ -64,11 +64,12 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
         }
 
         // 2. Prefill Delivery Method based on customer type
-        if (customer.type === 'B2C') {
-            updates.deliveryMethod = 'Recoge';
-            updates.shippingCost = 0;
-        } else if (customer.type === 'B2B') {
+        if (customer.type === 'B2B') {
             updates.deliveryMethod = 'Envío';
+            updates.shippingCost = 0;
+        } else {
+            // Default to B2C behavior if type is 'B2C' or missing
+            updates.deliveryMethod = 'Recoge';
             updates.shippingCost = 0;
         }
 
@@ -277,10 +278,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             <Form form={form} layout="vertical" onValuesChange={onValuesChange} requiredMark={false}>
                 <Row gutter={16}>
                     <Col xs={24} md={12}>
-                        <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={selectedCustomer.type === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{selectedCustomer.type}</Tag>}</span>} rules={[{ required: true }]}>
+                        <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={selectedCustomer.type === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{selectedCustomer.type || 'B2C'}</Tag>}</span>} rules={[{ required: true }]}>
                             <Select showSearch optionFilterProp="children" placeholder="Selecciona Cliente">
                                 {customers.filter(c => c.isActive !== false).map(c => (
-                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({c.type})</Option>
+                                    <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({c.type || 'B2C'})</Option>
                                 ))}
                             </Select>
                         </Form.Item>
