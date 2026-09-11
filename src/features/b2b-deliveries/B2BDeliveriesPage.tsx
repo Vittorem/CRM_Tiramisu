@@ -105,6 +105,16 @@ export const B2BDeliveriesPage = () => {
             ),
         },
         {
+            title: 'Frecuencia',
+            dataIndex: 'frequency',
+            key: 'frequency',
+            render: (freq: string) => (
+                <Tag color={freq === 'Quincenal' ? 'purple' : 'geekblue'}>
+                    {freq || 'Semanal'}
+                </Tag>
+            ),
+        },
+        {
             title: 'Horario',
             dataIndex: 'preferredTime',
             key: 'preferredTime',
@@ -175,10 +185,13 @@ export const B2BDeliveriesPage = () => {
                                     </Popconfirm>
                                 </Space>
                             </div>
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                                 {schedule.deliveryDays?.map(day => (
                                     <Tag key={day} color={DAY_TAG_COLORS[day]} style={{ fontSize: 11, margin: 0 }}>{day}</Tag>
                                 ))}
+                                <Tag color={schedule.frequency === 'Quincenal' ? 'purple' : 'geekblue'} style={{ fontSize: 11, margin: 0 }}>
+                                    {schedule.frequency || 'Semanal'}
+                                </Tag>
                             </div>
                             {(primary || schedule.preferredTime) && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>

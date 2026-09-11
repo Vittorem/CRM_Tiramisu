@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, Checkbox, theme, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
@@ -40,6 +40,10 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
+
+    // Double-tap prevention lock
+    const isSubmittingRef = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const prefillCustomerData = (customerId: string) => {
         try {
@@ -99,6 +103,8 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
     useEffect(() => {
         if (open) {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
             form.resetFields();
             if (initialValues) {
                 const deliveryDate = initialValues.deliveryDate
@@ -211,6 +217,9 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     };
 
     const handleFinish = async () => {
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        setIsSubmitting(true);
         try {
             const values = await form.validateFields();
             const customer = customers.find(c => c.id === values.customerId);
@@ -264,6 +273,9 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             onClose();
         } catch (e) {
             console.error(e);
+        } finally {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -278,18 +290,18 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
             extra={
                 !isMobile && (
                     <Space>
-                        <Button onClick={onClose}>Cancelar</Button>
-                        <Button type="primary" onClick={handleFinish} loading={loading}>Guardar</Button>
+                        <Button onClick={onClose} disabled={isSubmitting || loading}>Cancelar</Button>
+                        <Button type="primary" onClick={handleFinish} loading={isSubmitting || loading} disabled={isSubmitting || loading}>Guardar</Button>
                     </Space>
                 )
             }
             footer={
                 isMobile && (
                     <div style={{ display: 'flex', gap: '8px', padding: '8px' }}>
-                        <Button onClick={onClose} style={{ flex: 1 }} size="large">
+                        <Button onClick={onClose} disabled={isSubmitting || loading} style={{ flex: 1 }} size="large">
                             Cancelar
                         </Button>
-                        <Button type="primary" onClick={handleFinish} loading={loading} style={{ flex: 1 }} size="large">
+                        <Button type="primary" onClick={handleFinish} loading={isSubmitting || loading} disabled={isSubmitting || loading} style={{ flex: 1 }} size="large">
                             Guardar
                         </Button>
                     </div>

@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Button, Segmented, message, DatePicker, Skeleton, Space } from 'antd';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Button, Segmented, message, DatePicker, Skeleton, Space, Checkbox } from 'antd';
 import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { Order, OrderStatus, B2BDeliverySchedule } from '../../types';
@@ -29,6 +29,9 @@ export const OrdersPage = () => {
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [selectedMonth, setSelectedMonth] = useState(dayjs());
     const [prefillCustomerId, setPrefillCustomerId] = useState<string | null>(null);
+    const [showCancelled, setShowCancelled] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const isSavingRef = useRef(false);
 
     // Handle navigation state for creating orders from B2B alerts
     useEffect(() => {
@@ -91,6 +94,9 @@ export const OrdersPage = () => {
     };
 
     const handleSubmit = async (values: Partial<Order>) => {
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
+        setIsSaving(true);
         try {
             if (editingOrder) {
                 await update(editingOrder.id, values);
@@ -102,6 +108,9 @@ export const OrdersPage = () => {
             if (navigator.vibrate) navigator.vibrate(50);
         } catch {
             message.error('Error al guardar pedido');
+        } finally {
+            isSavingRef.current = false;
+            setIsSaving(false);
         }
     };
 
@@ -112,17 +121,25 @@ export const OrdersPage = () => {
     };
 
     const filteredOrders = orders.filter(o => {
+        if (!showCancelled && o.status === 'Cancelado') return false;
         const date = getOrderDate(o);
         if (!date) return false;
         return date.isSame(selectedMonth, 'month') && date.isSame(selectedMonth, 'year');
     });
 
-
+    const cancelledCount = useMemo(() => {
+        return orders.filter(o => {
+            if (o.status !== 'Cancelado') return false;
+            const date = getOrderDate(o);
+            if (!date) return false;
+            return date.isSame(selectedMonth, 'month') && date.isSame(selectedMonth, 'year');
+        }).length;
+    }, [orders, selectedMonth]);
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', marginBottom: 16, gap: 16, flexShrink: 0 }}>
-                <div style={{ display: 'flex', gap: 16, width: isMobile ? '100%' : 'auto' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: isMobile ? '100%' : 'auto', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
                     {!isMobile && (
                         <Segmented<string>
                             options={[
@@ -134,15 +151,21 @@ export const OrdersPage = () => {
                         />
                     )}
                     <DatePicker
-                        style={{ flex: 1 }}
+                        style={{ flex: isMobile ? 1 : undefined, minWidth: 140 }}
                         picker="month"
                         value={selectedMonth}
                         onChange={(val) => val && setSelectedMonth(val)}
                         allowClear={false}
                         format="MMMM YYYY"
                         placeholder="Seleccionar Mes"
-
                     />
+                    <Checkbox
+                        checked={showCancelled}
+                        onChange={(e) => setShowCancelled(e.target.checked)}
+                        style={{ fontSize: 13, userSelect: 'none', whiteSpace: 'nowrap' }}
+                    >
+                        Ver cancelados {cancelledCount > 0 && <span style={{ color: '#ff4d4f', fontWeight: 600 }}>({cancelledCount})</span>}
+                    </Checkbox>
                 </div>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate()} style={{ width: isMobile ? '100%' : 'auto' }}>
                     Nuevo Pedido
@@ -250,6 +273,7 @@ export const OrdersPage = () => {
                 onClose={() => { setIsFormOpen(false); setPrefillCustomerId(null); }}
                 onSubmit={handleSubmit}
                 initialValues={editingOrder}
+                loading={isSaving}
                 prefillCustomerId={prefillCustomerId}
             />
         </div>

@@ -98,6 +98,15 @@ export const B2BBusinessCard = ({ schedule, hasOrder, isPast, isDismissed, onCli
                 </div>
             </div>
 
+            {/* Frequency tag if Quincenal */}
+            {schedule.frequency === 'Quincenal' && (
+                <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, padding: '1px 6px', background: '#ffe6ff', color: '#b300b3', borderRadius: 4, fontWeight: 600, border: '1px solid #ffd1ff' }}>
+                        Quincenal
+                    </span>
+                </div>
+            )}
+
             {/* Preferred time */}
             {schedule.preferredTime && (
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>

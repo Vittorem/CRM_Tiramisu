@@ -58,6 +58,38 @@ function hasMatchingOrder(
 }
 
 /**
+ * Checks if a given target date falls within the delivery cycle of the B2B schedule.
+ */
+export function isDeliveryWeek(schedule: B2BDeliverySchedule, targetDate: dayjs.Dayjs): boolean {
+    if (!schedule.frequency || schedule.frequency === 'Semanal') {
+        return true;
+    }
+
+    if (schedule.frequency === 'Quincenal') {
+        let referenceDate = dayjs();
+        if (schedule.startDate) {
+            const startVal = typeof (schedule.startDate as any).toDate === 'function'
+                ? (schedule.startDate as any).toDate()
+                : new Date(schedule.startDate as any);
+            referenceDate = dayjs(startVal);
+        } else if (schedule.createdAt) {
+            const createdVal = typeof (schedule.createdAt as any).toDate === 'function'
+                ? (schedule.createdAt as any).toDate()
+                : new Date(schedule.createdAt as any);
+            referenceDate = dayjs(createdVal);
+        }
+
+        const refWeekStart = referenceDate.startOf('week');
+        const targetWeekStart = targetDate.startOf('week');
+
+        const diffWeeks = Math.abs(targetWeekStart.diff(refWeekStart, 'week'));
+        return diffWeeks % 2 === 0;
+    }
+
+    return true;
+}
+
+/**
  * Compute B2B delivery alerts for today and tomorrow.
  * Returns only alerts where an order has NOT been created yet.
  */
@@ -76,7 +108,7 @@ export function computeB2BAlerts(
         if (schedule.isActive === false) continue;
 
         // Check today
-        if (schedule.deliveryDays.includes(today)) {
+        if (schedule.deliveryDays.includes(today) && isDeliveryWeek(schedule, todayDate)) {
             const has = hasMatchingOrder(orders, schedule.customerId, todayDate);
             const targetDateStr = todayDate.format('YYYY-MM-DD');
             const isDismissed = schedule.dismissedDates?.includes(targetDateStr) || false;
@@ -91,7 +123,7 @@ export function computeB2BAlerts(
         }
 
         // Check tomorrow
-        if (schedule.deliveryDays.includes(tomorrow)) {
+        if (schedule.deliveryDays.includes(tomorrow) && isDeliveryWeek(schedule, tomorrowDate)) {
             const has = hasMatchingOrder(orders, schedule.customerId, tomorrowDate);
             const targetDateStr = tomorrowDate.format('YYYY-MM-DD');
             const isDismissed = schedule.dismissedDates?.includes(targetDateStr) || false;

@@ -226,6 +226,10 @@ export interface B2BDeliverySchedule extends BaseEntity {
     // Estado
     isActive: boolean;
 
+    // Frecuencia
+    frequency?: 'Semanal' | 'Quincenal';
+    startDate?: any;
+
     // Fechas en las que se ha omitido la notificación (formato YYYY-MM-DD)
     dismissedDates?: string[];
 }

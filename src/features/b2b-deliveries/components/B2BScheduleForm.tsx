@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Drawer, Form, Input, Select, Button, Space, Divider, Checkbox, Row, Col, Tag, Card, Timeline, Tabs } from 'antd';
+import { useEffect, useState, useRef } from 'react';
+import { Drawer, Form, Input, Select, Button, Space, Divider, Checkbox, Row, Col, Tag, Card, Timeline, Tabs, DatePicker } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, WhatsAppOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { B2BDeliverySchedule, Customer, DAYS_OF_WEEK, DayOfWeek, Order } from '../../../types';
 import { useIsMobile } from '../../../hooks/useIsMobile';
@@ -35,9 +35,13 @@ export const B2BScheduleForm = ({
     const [form] = Form.useForm();
     const isMobile = useIsMobile();
     const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([]);
+    const isSubmittingRef = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (open) {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
             form.resetFields();
             if (initialValues) {
                 form.setFieldsValue({
@@ -49,6 +53,8 @@ export const B2BScheduleForm = ({
                     deliveryNotes: initialValues.deliveryNotes,
                     notes: initialValues.notes,
                     isActive: initialValues.isActive,
+                    frequency: initialValues.frequency || 'Semanal',
+                    startDate: initialValues.startDate ? dayjs(initialValues.startDate.toDate ? initialValues.startDate.toDate() : initialValues.startDate) : dayjs(),
                 });
                 setSelectedDays(initialValues.deliveryDays || []);
             } else {
@@ -56,26 +62,40 @@ export const B2BScheduleForm = ({
                     isActive: true,
                     contacts: [{ name: '', phone: '', isWhatsApp: true, isPrimary: true }],
                     deliveryDays: [],
+                    frequency: 'Semanal',
+                    startDate: dayjs(),
                 });
                 setSelectedDays([]);
             }
         }
     }, [open, initialValues, form]);
 
+    const frequency = Form.useWatch('frequency', form);
+
     const handleSubmit = async () => {
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        setIsSubmitting(true);
         try {
             const values = await form.validateFields();
             if (selectedDays.length === 0) return;
             const customer = b2bCustomers.find(c => c.id === values.customerId);
+            
+            const startDateVal = values.startDate ? values.startDate.toDate() : new Date();
+
             await onSubmit({
                 ...values,
                 customerName: customer?.fullName || initialValues?.customerName || '',
                 deliveryDays: selectedDays,
                 isActive: values.isActive ?? true,
+                startDate: startDateVal,
             });
             onClose();
         } catch (error) {
             console.error('Validate Failed:', error);
+        } finally {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -128,6 +148,29 @@ export const B2BScheduleForm = ({
                     ))}
                 </Select>
             </Form.Item>
+
+            {/* Frequency Selection */}
+            <Form.Item
+                name="frequency"
+                label="Frecuencia de Entrega"
+                rules={[{ required: true, message: 'Selecciona la frecuencia' }]}
+            >
+                <Select placeholder="Selecciona frecuencia">
+                    <Option value="Semanal">Semanal</Option>
+                    <Option value="Quincenal">Quincenal (Cada 2 semanas)</Option>
+                </Select>
+            </Form.Item>
+
+            {frequency === 'Quincenal' && (
+                <Form.Item
+                    name="startDate"
+                    label="Fecha de Inicio del Ciclo"
+                    tooltip="Establece la semana de inicio para calcular el ciclo quincenal."
+                    rules={[{ required: true, message: 'Selecciona la fecha de inicio del ciclo' }]}
+                >
+                    <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Seleccionar fecha de inicio" />
+                </Form.Item>
+            )}
 
             {/* Day Selection — visual chips */}
             <div style={{ marginBottom: 24 }}>
@@ -353,8 +396,8 @@ export const B2BScheduleForm = ({
                             Eliminar
                         </Button>
                     )}
-                    <Button onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSubmit} type="primary" loading={loading}>
+                    <Button onClick={onClose} disabled={isSubmitting || loading}>Cancelar</Button>
+                    <Button onClick={handleSubmit} type="primary" loading={isSubmitting || loading} disabled={isSubmitting || loading}>
                         Guardar
                     </Button>
                 </Space>

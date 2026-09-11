@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Table, Button, Input, Space, Tag, Popconfirm, message, Card, List as AntList, Skeleton, theme } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
@@ -13,6 +13,8 @@ export const CustomerList = () => {
     const [searchText, setSearchText] = useState('');
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const isSavingRef = useRef(false);
 
     const isMobile = useIsMobile();
     const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText } } = theme.useToken();
@@ -37,6 +39,9 @@ export const CustomerList = () => {
     };
 
     const handleSubmit = async (values: Partial<Customer>) => {
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
+        setIsSaving(true);
         try {
             if (editingCustomer) {
                 await update(editingCustomer.id, values);
@@ -49,6 +54,9 @@ export const CustomerList = () => {
         } catch (error) {
             message.error('Error al guardar');
             throw error;
+        } finally {
+            isSavingRef.current = false;
+            setIsSaving(false);
         }
     };
 
@@ -178,6 +186,7 @@ export const CustomerList = () => {
                 onClose={() => setIsDrawerOpen(false)}
                 onSubmit={handleSubmit}
                 initialValues={editingCustomer}
+                loading={isSaving}
             />
         </div >
     );

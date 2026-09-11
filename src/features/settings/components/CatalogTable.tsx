@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useRef, ReactNode } from 'react';
 import { Table, Button, Drawer, Form, Switch, Space, Popconfirm, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
@@ -22,10 +22,14 @@ export function CatalogTable<T extends BaseEntity & { isActive: boolean }>({
     const { add, update, softDelete } = useFirestoreMutation(collectionName);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingItem, setEditingItem] = useState<T | null>(null);
+    const isSubmittingRef = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [form] = Form.useForm();
     const isMobile = window.innerWidth < 768; // Quick check for mobile
 
     const handleAdd = () => {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
         setEditingItem(null);
         form.resetFields();
         form.setFieldsValue({ isActive: true });
@@ -33,6 +37,8 @@ export function CatalogTable<T extends BaseEntity & { isActive: boolean }>({
     };
 
     const handleEdit = (record: T) => {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
         setEditingItem(record);
         form.setFieldsValue(record);
         setIsModalVisible(true);
@@ -48,6 +54,9 @@ export function CatalogTable<T extends BaseEntity & { isActive: boolean }>({
     };
 
     const handleOk = async () => {
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        setIsSubmitting(true);
         try {
             const values = await form.validateFields();
             if (editingItem) {
@@ -61,6 +70,9 @@ export function CatalogTable<T extends BaseEntity & { isActive: boolean }>({
         } catch (error) {
             console.error(error);
             message.error('Error al guardar');
+        } finally {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -118,8 +130,8 @@ export function CatalogTable<T extends BaseEntity & { isActive: boolean }>({
                 height={isMobile ? '90vh' : '100%'}
                 extra={
                     <Space>
-                        <Button onClick={() => setIsModalVisible(false)}>Cancelar</Button>
-                        <Button type="primary" onClick={handleOk}>Guardar</Button>
+                        <Button onClick={() => setIsModalVisible(false)} disabled={isSubmitting}>Cancelar</Button>
+                        <Button type="primary" onClick={handleOk} loading={isSubmitting} disabled={isSubmitting}>Guardar</Button>
                     </Space>
                 }
             >

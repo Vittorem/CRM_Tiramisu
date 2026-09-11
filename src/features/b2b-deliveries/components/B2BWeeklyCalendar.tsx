@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { message, Tag } from 'antd';
 import { B2BDeliverySchedule, DAYS_OF_WEEK, DayOfWeek, Order } from '../../../types';
 import { B2BBusinessCard } from './B2BBusinessCard';
-import { hasOrderForDayThisWeek, getTodayDayOfWeek, isScheduleDismissedForDay, getDateForDayThisWeek } from '../../../utils/b2bAlerts';
+import { hasOrderForDayThisWeek, getTodayDayOfWeek, isScheduleDismissedForDay, getDateForDayThisWeek, isDeliveryWeek } from '../../../utils/b2bAlerts';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { useFirestoreMutation } from '../../../hooks/useFirestore';
 import { arrayUnion } from 'firebase/firestore';
@@ -63,6 +63,10 @@ export const B2BWeeklyCalendar = ({ schedules, orders, onSelectSchedule }: B2BWe
         for (const s of schedules) {
             if (s.isActive === false) continue;
             for (const day of s.deliveryDays) {
+                const dateForDay = getDateForDayThisWeek(day);
+                if (dateForDay && !isDeliveryWeek(s, dateForDay)) {
+                    continue;
+                }
                 map[day].push(s);
             }
         }

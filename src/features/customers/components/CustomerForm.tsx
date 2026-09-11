@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Drawer, Form, Input, Select, Button, InputNumber, Row, Col, Space, Divider, Switch, Tabs, Timeline, Card, Tag, theme } from 'antd';
 import { Customer, Order } from '../../../types';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
@@ -32,8 +32,13 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
         })
         : [];
 
+    const isSubmittingRef = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     useEffect(() => {
         if (open) {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
             form.resetFields();
             if (initialValues) {
                 form.setFieldsValue(initialValues);
@@ -44,12 +49,18 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
     }, [open, initialValues, form]);
 
     const handleSubmit = async () => {
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        setIsSubmitting(true);
         try {
             const values = await form.validateFields();
             await onSubmit(values);
             onClose();
         } catch (error) {
             console.error('Validate Failed:', error);
+        } finally {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -197,8 +208,8 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
             extra={
                 !isMobile && (
                     <Space>
-                        <Button onClick={onClose}>Cancelar</Button>
-                        <Button onClick={handleSubmit} type="primary" loading={loading}>
+                        <Button onClick={onClose} disabled={isSubmitting || loading}>Cancelar</Button>
+                        <Button onClick={handleSubmit} type="primary" loading={isSubmitting || loading} disabled={isSubmitting || loading}>
                             Guardar
                         </Button>
                     </Space>
@@ -207,10 +218,10 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
             footer={
                 isMobile && (
                     <div style={{ display: 'flex', gap: '8px', padding: '8px' }}>
-                        <Button onClick={onClose} style={{ flex: 1 }} size="large">
+                        <Button onClick={onClose} disabled={isSubmitting || loading} style={{ flex: 1 }} size="large">
                             Cancelar
                         </Button>
-                        <Button onClick={handleSubmit} type="primary" loading={loading} style={{ flex: 1 }} size="large">
+                        <Button onClick={handleSubmit} type="primary" loading={isSubmitting || loading} disabled={isSubmitting || loading} style={{ flex: 1 }} size="large">
                             Guardar
                         </Button>
                     </div>
