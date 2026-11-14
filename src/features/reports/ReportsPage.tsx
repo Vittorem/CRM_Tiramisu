@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag, Table, theme } from 'antd';
+import { Card, DatePicker, Space, Button, Divider, Typography, message, Empty, Row, Col, Statistic, Progress, Tag, Table, Modal, Select, theme } from 'antd';
 import {
     FileExcelOutlined,
     FilePdfOutlined,
@@ -12,16 +12,19 @@ import {
     WomanOutlined,
     DownloadOutlined,
     PieChartOutlined,
+    CalendarOutlined,
 } from '@ant-design/icons';
 import {
     PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import dayjs from 'dayjs';
 import { useFirestoreSubscription } from '../../hooks/useFirestore';
-import { Order, Customer, Recipe, Ingredient, Product } from '../../types';
+import { Order, Customer, Recipe, Ingredient, Product, Channel } from '../../types';
 import { getDeliveredOrdersInRange } from '../../utils/dateHelpers';
 import { computeDemographics } from '../../utils/demographicsHelpers';
 import { findRecipeForProduct, calculateCostPerServing } from '../../utils/costHelpers';
+import { getAvailableReportYears, buildAnnualReportData } from '../../utils/annualReport';
+import { exportAnnualReportExcel, exportAnnualReportPDF } from '../../services/annualReportExport';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import {
     exportOrdersExcel,
@@ -43,7 +46,26 @@ export const ReportsPage = () => {
     const { data: recipes } = useFirestoreSubscription<Recipe>('recipes');
     const { data: ingredients } = useFirestoreSubscription<Ingredient>('ingredients');
     const { data: products } = useFirestoreSubscription<Product>('catalog_products');
+    const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
     const isMobile = useIsMobile();
+
+    const [annualModalOpen, setAnnualModalOpen] = useState(false);
+    const [selectedYear, setSelectedYear] = useState<number>(() => dayjs().year());
+    const [exportingAnnual, setExportingAnnual] = useState<'excel' | 'pdf' | null>(null);
+
+    const availableYears = useMemo(() => getAvailableReportYears(orders), [orders]);
+
+    const annualData = useMemo(() => {
+        if (!annualModalOpen) return null;
+        return buildAnnualReportData(selectedYear, {
+            orders,
+            customers,
+            recipes,
+            ingredients,
+            products,
+            channels,
+        });
+    }, [annualModalOpen, selectedYear, orders, customers, recipes, ingredients, products, channels]);
 
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
         dayjs().startOf('month'),
@@ -131,6 +153,39 @@ export const ReportsPage = () => {
     const handleDemoXML = () => {
         exportDemographicsXML(demographics, dateRange);
         message.success('XML de demografía generado');
+    };
+
+    const handleOpenAnnualModal = () => {
+        setSelectedYear(dayjs().year());
+        setAnnualModalOpen(true);
+    };
+
+    const handleDownloadAnnualExcel = async () => {
+        if (!annualData) return;
+        setExportingAnnual('excel');
+        try {
+            await exportAnnualReportExcel(annualData);
+            message.success(`Reporte Anual ${annualData.year} (Excel) descargado`);
+        } catch (err) {
+            console.error('Error al generar Reporte Anual Excel:', err);
+            message.error('Error al generar el Reporte Anual en Excel');
+        } finally {
+            setExportingAnnual(null);
+        }
+    };
+
+    const handleDownloadAnnualPDF = async () => {
+        if (!annualData) return;
+        setExportingAnnual('pdf');
+        try {
+            await exportAnnualReportPDF(annualData);
+            message.success(`Reporte Anual ${annualData.year} (PDF) descargado`);
+        } catch (err) {
+            console.error('Error al generar Reporte Anual PDF:', err);
+            message.error('Error al generar el Reporte Anual en PDF');
+        } finally {
+            setExportingAnnual(null);
+        }
     };
 
     // Compute gender percentages for visual display
@@ -221,6 +276,41 @@ export const ReportsPage = () => {
             </Row>
 
             {/* Export Section */}
+            <Card
+                bordered={false}
+                style={{
+                    borderRadius: 12,
+                    marginBottom: 24,
+                    border: `1px solid ${colorBorderSecondary}`,
+                }}
+            >
+                <div style={{
+                    display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    gap: 16,
+                }}>
+                    <div>
+                        <Title level={4} style={{ margin: 0 }}>
+                            <CalendarOutlined /> Reporte Anual Integral
+                        </Title>
+                        <Text type="secondary">
+                            Compila en un solo archivo ventas, costos, temporalidad (mes/día), productos, sabores, canales, B2B/B2C, género, demografía y top clientes.
+                        </Text>
+                    </div>
+                    <Button
+                        type="primary"
+                        size="large"
+                        icon={<DownloadOutlined />}
+                        onClick={handleOpenAnnualModal}
+                        style={{ borderRadius: 8, height: 48, minWidth: isMobile ? '100%' : 240 }}
+                    >
+                        Generar Reporte Anual
+                    </Button>
+                </div>
+            </Card>
+
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} lg={12}>
                     <Card
@@ -485,6 +575,106 @@ export const ReportsPage = () => {
                     ]}
                 />
             </Card>
+
+            <Modal
+                title={<><CalendarOutlined /> Descargar Reporte Anual</>}
+                open={annualModalOpen}
+                onCancel={() => setAnnualModalOpen(false)}
+                footer={null}
+                width={520}
+            >
+                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                    <div>
+                        <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                            ¿De qué año quieres descargar los datos?
+                        </Text>
+                        <Select
+                            value={selectedYear}
+                            onChange={setSelectedYear}
+                            style={{ width: '100%' }}
+                            size="large"
+                            options={availableYears.map(y => ({
+                                value: y,
+                                label: y === dayjs().year() ? `${y} (Año en curso)` : String(y),
+                            }))}
+                        />
+                    </div>
+
+                    {annualData && (
+                        <Card size="small" style={{ borderRadius: 8 }}>
+                            <Row gutter={[12, 12]}>
+                                <Col span={12}>
+                                    <Statistic
+                                        title="Ventas Totales"
+                                        value={annualData.summary.totalSales}
+                                        precision={2}
+                                        prefix="$"
+                                    />
+                                </Col>
+                                <Col span={12}>
+                                    <Statistic
+                                        title="Ganancia Estimada"
+                                        value={annualData.summary.netProfit}
+                                        precision={2}
+                                        prefix="$"
+                                    />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic
+                                        title="Pedidos"
+                                        value={annualData.summary.deliveredCount}
+                                    />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic
+                                        title="Clientes"
+                                        value={annualData.summary.uniqueCustomers}
+                                    />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic
+                                        title="Mejor Mes"
+                                        value={annualData.summary.bestMonthName}
+                                    />
+                                </Col>
+                            </Row>
+                        </Card>
+                    )}
+
+                    {annualData && annualData.summary.deliveredCount === 0 && (
+                        <Text type="warning">
+                            No hay pedidos entregados registrados en {selectedYear}.
+                        </Text>
+                    )}
+
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button
+                            type="primary"
+                            icon={<FileExcelOutlined />}
+                            size="large"
+                            block
+                            loading={exportingAnnual === 'excel'}
+                            disabled={!annualData || annualData.summary.deliveredCount === 0}
+                            onClick={handleDownloadAnnualExcel}
+                            style={{ background: '#10b981', borderColor: '#10b981', borderRadius: 8, height: 48 }}
+                        >
+                            Descargar Excel Completo (8 hojas)
+                        </Button>
+                        <Button
+                            danger
+                            icon={<FilePdfOutlined />}
+                            size="large"
+                            block
+                            loading={exportingAnnual === 'pdf'}
+                            disabled={!annualData || annualData.summary.deliveredCount === 0}
+                            onClick={handleDownloadAnnualPDF}
+                            style={{ borderRadius: 8, height: 48 }}
+                        >
+                            Descargar PDF Ejecutivo
+                        </Button>
+                    </Space>
+                </Space>
+            </Modal>
         </div>
     );
 };
