@@ -1,10 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button, InputNumber, Typography, Table, Input, message } from 'antd';
 import { CloseOutlined, FilePdfOutlined, DownloadOutlined, CalculatorOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
 import { Recipe, Ingredient } from '../../../types';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
 import { theme as antdTheme } from 'antd';
 
@@ -23,19 +21,20 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
     const [salePricePerServing, setSalePricePerServing] = useState<number>(0);
 
     // Update whenever recipe changes
-    useMemo(() => {
+    useEffect(() => {
         setDesiredServings(recipe.servings_default);
     }, [recipe.id, recipe.servings_default]);
 
     const ratio = recipe.servings_default > 0 ? desiredServings / recipe.servings_default : 1;
 
-    // Calculate scaled ingredients and total cost
+    // Calculate scaled ingredients and total cost using O(1) Map lookup
     const scaledData = useMemo(() => {
         if (!ingredients || !recipe.ingredients) return { items: [], totalCost: 0 };
-        
+
+        const ingredientMap = new Map(ingredients.map(ing => [ing.id, ing]));
         let totalCost = 0;
         const items = recipe.ingredients.map(ri => {
-            const ingredient = ingredients.find(ing => ing.id === ri.ingredientId);
+            const ingredient = ingredientMap.get(ri.ingredientId);
             const scaledQty = ri.qty * ratio;
             const itemCost = ingredient ? (ingredient.cost_unit * scaledQty) : 0;
             totalCost += itemCost;
@@ -53,7 +52,7 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
         return { items, totalCost };
     }, [recipe, ingredients, ratio]);
 
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (!clientName) {
             message.warning('Por favor ingresa un nombre de cliente para la cotización.');
             return;
@@ -63,6 +62,11 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
             message.warning('Por favor ingresa un precio de venta mayor a 0 para generar la cotización.');
             return;
         }
+
+        const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable'),
+        ]);
 
         const doc = new jsPDF();
         const dateStr = dayjs().format('DD/MM/YYYY');
@@ -98,7 +102,8 @@ export const RecipeDetailPanel = ({ recipe, onClose }: RecipeDetailPanelProps) =
         });
 
         // Summary
-        const finalY = (doc as any).lastAutoTable.finalY || 65;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const finalY = (doc as any).lastAutoTable?.finalY || 65;
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text(`Gran Total: $${totalQuoteAmount.toFixed(2)}`, 14, finalY + 15);

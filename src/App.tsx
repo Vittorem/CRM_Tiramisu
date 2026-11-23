@@ -1,26 +1,30 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, Spin, theme } from 'antd';
 import esES from 'antd/locale/es_ES';
 import { AuthGate } from './components/auth/AuthGate';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLayout } from './components/layout/AppLayout';
 import { LicenseProvider } from './contexts/LicenseContext';
 
-import { SettingsPage } from './features/settings/SettingsPage';
-import { CustomerList } from './features/customers/CustomerList';
-import { OrdersPage } from './features/orders/OrdersPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { InventoryPage } from './features/inventory/InventoryPage';
-import { ReportsPage } from './features/reports/ReportsPage';
-import { RecetarioPage } from './features/recetario/RecetarioPage';
-import { BehaviorPage } from './features/behavior/BehaviorPage';
-import { RoadmapPage } from './features/roadmap/RoadmapPage';
-import { B2BDeliveriesPage } from './features/b2b-deliveries/B2BDeliveriesPage';
-import { AdminPage } from './features/admin/AdminPage';
+// Route-level code splitting
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const CustomerList = lazy(() => import('./features/customers/CustomerList').then(m => ({ default: m.CustomerList })));
+const OrdersPage = lazy(() => import('./features/orders/OrdersPage').then(m => ({ default: m.OrdersPage })));
+const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const InventoryPage = lazy(() => import('./features/inventory/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const ReportsPage = lazy(() => import('./features/reports/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const RecetarioPage = lazy(() => import('./features/recetario/RecetarioPage').then(m => ({ default: m.RecetarioPage })));
+const BehaviorPage = lazy(() => import('./features/behavior/BehaviorPage').then(m => ({ default: m.BehaviorPage })));
+const RoadmapPage = lazy(() => import('./features/roadmap/RoadmapPage').then(m => ({ default: m.RoadmapPage })));
+const B2BDeliveriesPage = lazy(() => import('./features/b2b-deliveries/B2BDeliveriesPage').then(m => ({ default: m.B2BDeliveriesPage })));
+const AdminPage = lazy(() => import('./features/admin/AdminPage').then(m => ({ default: m.AdminPage })));
 
-const queryClient = new QueryClient();
+const PageLoader = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 280, width: '100%' }}>
+        <Spin size="large" />
+    </div>
+);
 
 const ThemeContext = createContext({
     isDarkMode: false,
@@ -34,59 +38,66 @@ function App() {
         return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
-    const toggleDarkMode = () => {
-        const nextMode = !isDarkMode;
-        setIsDarkMode(nextMode);
-        localStorage.setItem('crm_theme', nextMode ? 'dark' : 'light');
-    };
+    const toggleDarkMode = useCallback(() => {
+        setIsDarkMode(prev => {
+            const nextMode = !prev;
+            localStorage.setItem('crm_theme', nextMode ? 'dark' : 'light');
+            return nextMode;
+        });
+    }, []);
 
     useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.style.setProperty('--color-cream', '#1a0f12');
-            document.documentElement.style.setProperty('--color-espresso', '#f3e8eb');
-            document.body.style.backgroundColor = '#1a0f12';
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.style.setProperty('--color-cream', '#fff5f6');
-            document.documentElement.style.setProperty('--color-espresso', '#3f2b2f');
-            document.body.style.backgroundColor = '#fff5f6';
-            document.documentElement.classList.remove('dark');
+        const bgColor = isDarkMode ? '#1a0f12' : '#fff5f6';
+        const fgColor = isDarkMode ? '#f3e8eb' : '#3f2b2f';
+
+        document.documentElement.style.setProperty('--color-cream', bgColor);
+        document.documentElement.style.setProperty('--color-espresso', fgColor);
+        document.body.style.backgroundColor = bgColor;
+        document.documentElement.classList.toggle('dark', isDarkMode);
+
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) {
+            themeMeta.setAttribute('content', bgColor);
         }
     }, [isDarkMode]);
 
+    const themeContextValue = useMemo(
+        () => ({ isDarkMode, toggleDarkMode }),
+        [isDarkMode, toggleDarkMode]
+    );
+
+    const antdThemeConfig = useMemo(() => ({
+        algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
+        token: {
+            colorPrimary: '#db2777',
+            colorInfo: '#db2777',
+            borderRadius: 12,
+            fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
+            controlHeight: 40,
+            controlHeightLG: 48,
+            fontSize: 14,
+            boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)',
+            colorBgBase: isDarkMode ? '#1a0f12' : '#fff5f6',
+        },
+        components: {
+            Card: {
+                colorBgContainer: isDarkMode ? '#26161a' : '#ffffff',
+            },
+            Layout: {
+                bodyBg: isDarkMode ? '#1a0f12' : '#fff5f6',
+                headerBg: isDarkMode ? '#26161a' : '#ffffff',
+            }
+        }
+    }), [isDarkMode]);
+
     return (
-        <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
-            <ConfigProvider
-                locale={esES}
-                theme={{
-                    algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-                    token: {
-                        colorPrimary: '#db2777',
-                        colorInfo: '#db2777',
-                        borderRadius: 12,
-                        fontFamily: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
-                        controlHeight: 40,
-                        controlHeightLG: 48,
-                        fontSize: 14,
-                        boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.05)',
-                        colorBgBase: isDarkMode ? '#1a0f12' : '#fff5f6',
-                    },
-                    components: {
-                        Card: {
-                            colorBgContainer: isDarkMode ? '#26161a' : '#ffffff',
-                        },
-                        Layout: {
-                            bodyBg: isDarkMode ? '#1a0f12' : '#fff5f6',
-                            headerBg: isDarkMode ? '#26161a' : '#ffffff',
-                        }
-                    }
-                }}
-            >
-                <QueryClientProvider client={queryClient}>
-                    <ErrorBoundary>
-                        <AuthGate>
-                            <LicenseProvider>
-                                <BrowserRouter>
+        <ThemeContext.Provider value={themeContextValue}>
+            <ConfigProvider locale={esES} theme={antdThemeConfig}>
+                <ErrorBoundary>
+                    <AuthGate>
+                        <LicenseProvider>
+                            <BrowserRouter>
+                                <Suspense fallback={<PageLoader />}>
                                     <Routes>
                                         <Route path="/" element={<AppLayout />}>
                                             <Route index element={<DashboardPage />} />
@@ -103,11 +114,11 @@ function App() {
                                             <Route path="*" element={<Navigate to="/" replace />} />
                                         </Route>
                                     </Routes>
-                                </BrowserRouter>
-                            </LicenseProvider>
-                        </AuthGate>
-                    </ErrorBoundary>
-                </QueryClientProvider>
+                                </Suspense>
+                            </BrowserRouter>
+                        </LicenseProvider>
+                    </AuthGate>
+                </ErrorBoundary>
             </ConfigProvider>
         </ThemeContext.Provider>
     );

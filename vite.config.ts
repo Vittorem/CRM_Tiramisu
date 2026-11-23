@@ -13,8 +13,8 @@ export default defineConfig({
                 name: 'CRM Repostería',
                 short_name: 'CRM',
                 description: 'Sistema CRM para negocios de repostería',
-                theme_color: '#ffffff',
-                background_color: '#ffffff',
+                theme_color: '#fff5f6',
+                background_color: '#fff5f6',
                 display: 'standalone',
                 orientation: 'portrait',
                 icons: [
@@ -37,4 +37,16 @@ export default defineConfig({
             }
         })
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+                    'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+                    'antd-vendor': ['antd', '@ant-design/icons'],
+                    'charts-vendor': ['recharts'],
+                },
+            },
+        },
+    },
 });

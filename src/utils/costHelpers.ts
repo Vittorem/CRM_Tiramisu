@@ -3,40 +3,50 @@ import { Order, Recipe, Ingredient } from '../types';
 /**
  * Calculates the total cost of a single recipe based on its ingredients.
  */
-export const calculateRecipeCost = (recipe: Recipe, allIngredients: Ingredient[]): number => {
+export const calculateRecipeCost = (
+    recipe: Recipe,
+    allIngredients: Ingredient[],
+    ingredientMap?: Map<string, Ingredient>
+): number => {
     if (!recipe.ingredients || recipe.ingredients.length === 0) return 0;
-    
+
+    const map = ingredientMap ?? new Map(allIngredients.map(ing => [ing.id, ing]));
+
     return recipe.ingredients.reduce((total, ri) => {
-        const ingredient = allIngredients.find(ing => ing.id === ri.ingredientId);
+        const ingredient = map.get(ri.ingredientId);
         if (!ingredient) return total;
-        return total + (ingredient.cost_unit * ri.qty);
+        return total + ingredient.cost_unit * ri.qty;
     }, 0);
 };
 
 /**
  * Calculates the per-serving cost of a recipe.
  */
-export const calculateCostPerServing = (recipe: Recipe, allIngredients: Ingredient[]): number => {
+export const calculateCostPerServing = (
+    recipe: Recipe,
+    allIngredients: Ingredient[],
+    ingredientMap?: Map<string, Ingredient>
+): number => {
     if (!recipe.servings_default || recipe.servings_default <= 0) return 0;
-    const totalCost = calculateRecipeCost(recipe, allIngredients);
+    const totalCost = calculateRecipeCost(recipe, allIngredients, ingredientMap);
     return totalCost / recipe.servings_default;
 };
 
 /**
- * Matches an order (or its items) to a known recipe intelligently, 
+ * Matches an order (or its items) to a known recipe intelligently,
  * estimating the operational cost based on current ingredient prices.
  */
 export const findRecipeForProduct = (
     productId: string | undefined,
     flavorId: string | undefined,
-    productName: string, 
-    flavorName: string | undefined, 
+    productName: string,
+    flavorName: string | undefined,
     recipes: Recipe[]
 ): Recipe | undefined => {
     // Pass 0: Strict ID Linkage Match (Highest Priority)
-    let matchedRecipe = recipes.find(r => 
-        r.linkedProductId && 
-        r.linkedProductId === productId && 
+    let matchedRecipe = recipes.find(r =>
+        r.linkedProductId &&
+        r.linkedProductId === productId &&
         (flavorId ? r.linkedFlavorId === flavorId : true)
     );
 
@@ -61,21 +71,23 @@ export const findRecipeForProduct = (
     if (!matchedRecipe) {
         const sizes = ['bambino', 'mediano', 'grande'];
         const detectedSize = sizes.find(s => prodLower.includes(s));
-        
+
         if (detectedSize) {
-             if (flavorLower) {
-                 matchedRecipe = recipes.find(r => r.name.toLowerCase().includes(detectedSize) && r.name.toLowerCase().includes(flavorLower));
-             }
-             if (!matchedRecipe) {
-                 matchedRecipe = recipes.find(r => r.name.toLowerCase().includes(detectedSize));
-             }
+            if (flavorLower) {
+                matchedRecipe = recipes.find(
+                    r => r.name.toLowerCase().includes(detectedSize) && r.name.toLowerCase().includes(flavorLower)
+                );
+            }
+            if (!matchedRecipe) {
+                matchedRecipe = recipes.find(r => r.name.toLowerCase().includes(detectedSize));
+            }
         }
     }
 
     // Pass 4: Substring Inclusion
     if (!matchedRecipe) {
-        matchedRecipe = recipes.find(r => 
-            r.name.toLowerCase().includes(prodLower) || 
+        matchedRecipe = recipes.find(r =>
+            r.name.toLowerCase().includes(prodLower) ||
             prodLower.includes(r.name.toLowerCase())
         );
     }
@@ -84,24 +96,27 @@ export const findRecipeForProduct = (
 };
 
 /**
- * Matches an order (or its items) to a known recipe intelligently, 
+ * Matches an order (or its items) to a known recipe intelligently,
  * estimating the operational cost based on current ingredient prices.
  */
 export const calculateOrderEstimatedCost = (
-    order: Order, 
-    recipes: Recipe[], 
-    ingredients: Ingredient[]
+    order: Order,
+    recipes: Recipe[],
+    ingredients: Ingredient[],
+    ingredientMap?: Map<string, Ingredient>
 ): number => {
+    const map = ingredientMap ?? new Map(ingredients.map(ing => [ing.id, ing]));
+
     const getCost = (
         productId: string | undefined,
         flavorId: string | undefined,
-        productName: string, 
-        flavorName: string | undefined, 
+        productName: string,
+        flavorName: string | undefined,
         quantity: number
     ): number => {
         const matchedRecipe = findRecipeForProduct(productId, flavorId, productName, flavorName, recipes);
         if (matchedRecipe) {
-            const costPerServing = calculateCostPerServing(matchedRecipe, ingredients);
+            const costPerServing = calculateCostPerServing(matchedRecipe, ingredients, map);
             return costPerServing * quantity;
         }
         return 0;
@@ -114,7 +129,7 @@ export const calculateOrderEstimatedCost = (
     } else if (order.productNameAtSale) {
         return getCost(order.productId, order.flavorId, order.productNameAtSale, undefined, order.quantity || 1);
     }
-    
+
     return 0;
 };
 
@@ -134,41 +149,49 @@ export const explodedIngredientsForOrders = (
     recipes: Recipe[],
     ingredients: Ingredient[]
 ): ExplodedIngredient[] => {
+    const ingredientMap = new Map(ingredients.map(ing => [ing.id, ing]));
     const totals: Record<string, { name: string; qty: number; unit: string; costUnit: number }> = {};
-    
+
+    const addRecipeIngredients = (matchedRecipe: Recipe, quantity: number) => {
+        const ratio = quantity / (matchedRecipe.servings_default || 1);
+        matchedRecipe.ingredients.forEach(ri => {
+            const ing = ingredientMap.get(ri.ingredientId);
+            if (!ing) return;
+            if (!totals[ri.ingredientId]) {
+                totals[ri.ingredientId] = {
+                    name: ing.name,
+                    qty: 0,
+                    unit: ri.unit || ing.unit,
+                    costUnit: ing.cost_unit || 0,
+                };
+            }
+            totals[ri.ingredientId].qty += ri.qty * ratio;
+        });
+    };
+
     orders.forEach(order => {
         const items = order.items || [];
-        
+
         if (items.length > 0) {
             items.forEach(item => {
-                const matchedRecipe = findRecipeForProduct(item.productId, item.flavorId, item.productNameAtSale, item.flavorNameAtSale, recipes);
-                if (!matchedRecipe) return;
-                
-                const ratio = item.quantity / (matchedRecipe.servings_default || 1);
-                
-                matchedRecipe.ingredients.forEach(ri => {
-                    const ing = ingredients.find(i => i.id === ri.ingredientId);
-                    if (!ing) return;
-                    if (!totals[ri.ingredientId]) {
-                        totals[ri.ingredientId] = { name: ing.name, qty: 0, unit: ri.unit || ing.unit, costUnit: ing.cost_unit || 0 };
-                    }
-                    totals[ri.ingredientId].qty += ri.qty * ratio;
-                });
+                const matchedRecipe = findRecipeForProduct(
+                    item.productId,
+                    item.flavorId,
+                    item.productNameAtSale,
+                    item.flavorNameAtSale,
+                    recipes
+                );
+                if (matchedRecipe) addRecipeIngredients(matchedRecipe, item.quantity);
             });
         } else if (order.productNameAtSale) {
-            const matchedRecipe = findRecipeForProduct(order.productId, order.flavorId, order.productNameAtSale, undefined, recipes);
-            if (!matchedRecipe) return;
-            
-            const ratio = (order.quantity || 1) / (matchedRecipe.servings_default || 1);
-            
-            matchedRecipe.ingredients.forEach(ri => {
-                const ing = ingredients.find(i => i.id === ri.ingredientId);
-                if (!ing) return;
-                if (!totals[ri.ingredientId]) {
-                    totals[ri.ingredientId] = { name: ing.name, qty: 0, unit: ri.unit || ing.unit, costUnit: ing.cost_unit || 0 };
-                }
-                totals[ri.ingredientId].qty += ri.qty * ratio;
-            });
+            const matchedRecipe = findRecipeForProduct(
+                order.productId,
+                order.flavorId,
+                order.productNameAtSale,
+                undefined,
+                recipes
+            );
+            if (matchedRecipe) addRecipeIngredients(matchedRecipe, order.quantity || 1);
         }
     });
 
@@ -177,6 +200,6 @@ export const explodedIngredientsForOrders = (
         name: data.name,
         qty: data.qty,
         unit: data.unit,
-        cost: data.qty * data.costUnit
+        cost: data.qty * data.costUnit,
     }));
 };

@@ -130,14 +130,24 @@ export const ReportsPage = () => {
 
     // ─── Handlers ─────────────────────────────────────────────────────
 
-    const handleExcelExport = () => {
-        exportOrdersExcel(filteredOrders, customers, recipes, ingredients);
-        message.success('Archivo Excel generado');
+    const handleExcelExport = async () => {
+        try {
+            await exportOrdersExcel(filteredOrders, customers, recipes, ingredients);
+            message.success('Archivo Excel generado');
+        } catch (err) {
+            console.error('Error al generar Excel:', err);
+            message.error('Error al generar el archivo Excel');
+        }
     };
 
-    const handlePdfExport = () => {
-        exportOrdersPDF(filteredOrders, dateRange, recipes, ingredients);
-        message.success('PDF generado');
+    const handlePdfExport = async () => {
+        try {
+            await exportOrdersPDF(filteredOrders, dateRange, recipes, ingredients);
+            message.success('PDF generado');
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+            message.error('Error al generar el PDF');
+        }
     };
 
     const handleCustomerXML = () => {
@@ -145,9 +155,14 @@ export const ReportsPage = () => {
         message.success('XML de clientes generado');
     };
 
-    const handleDemoPDF = () => {
-        exportDemographicsPDF(demographics, dateRange);
-        message.success('PDF de demografía generado');
+    const handleDemoPDF = async () => {
+        try {
+            await exportDemographicsPDF(demographics, dateRange);
+            message.success('PDF de demografía generado');
+        } catch (err) {
+            console.error('Error al generar PDF de demografía:', err);
+            message.error('Error al generar el PDF de demografía');
+        }
     };
 
     const handleDemoXML = () => {

@@ -1,37 +1,33 @@
 import { useState, useEffect } from 'react';
 
 export const useIsMobile = (breakpoint: number = 992) => {
-    const isMobileDevice = () => {
+    const checkIsMobile = () => {
         if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-
-        const hasMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Phone|HarmonyOS/i.test(navigator.userAgent);
         const hasMobileWidth = window.innerWidth < breakpoint;
-        // User agent es la verdad absoluta para celulares físicos, innerWidth aporta soporte responsivo en web desktop.
-        return hasMobileUA || hasMobileWidth;
+        // Phone user agents should stay mobile, but large tablets (>= 1024px) get desktop layout
+        const hasPhoneUA = /Android.*Mobile|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+        return hasMobileWidth || (hasPhoneUA && window.innerWidth < 1024);
     };
 
-    const [isMobile, setIsMobile] = useState(isMobileDevice());
+    const [isMobile, setIsMobile] = useState(checkIsMobile);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
         let timeoutId: number;
-
         const handleResize = () => {
-            clearTimeout(timeoutId);
+            window.clearTimeout(timeoutId);
             timeoutId = window.setTimeout(() => {
-                setIsMobile(isMobileDevice());
+                setIsMobile(checkIsMobile());
             }, 100);
         };
 
-        // Forzamos un chequeo inicial por si el framework falló en el hydrate
         handleResize();
-
         window.addEventListener('resize', handleResize);
 
         return () => {
             window.removeEventListener('resize', handleResize);
-            clearTimeout(timeoutId);
+            window.clearTimeout(timeoutId);
         };
     }, [breakpoint]);
 
