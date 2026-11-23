@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Button, Segmented, message, Input, Table, Tag, Space, Popconfirm, Skeleton, Card, Empty } from 'antd';
+import { Button, Segmented, message, Input, Table, Tag, Space, Popconfirm, Skeleton, Card, Empty, theme } from 'antd';
 import { PlusOutlined, CalendarOutlined, UnorderedListOutlined, SearchOutlined, EditOutlined, DeleteOutlined, WhatsAppOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { B2BDeliverySchedule, Customer, Order, DayOfWeek } from '../../types';
@@ -24,6 +24,7 @@ export const B2BDeliveriesPage = () => {
     const { add, update, softDelete } = useFirestoreMutation('b2b_schedules');
 
     const isMobile = useIsMobile();
+    const { token: { colorBgContainer } } = theme.useToken();
 
     const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -263,11 +264,16 @@ export const B2BDeliveriesPage = () => {
                     onSelectSchedule={handleEdit}
                 />
             ) : (
-                <Card bodyStyle={{ padding: isMobile ? 0 : 24 }} bordered={!isMobile} style={{ background: isMobile ? 'transparent' : '#fff', boxShadow: 'none' }}>
+                <Card
+                    styles={{ body: { padding: isMobile ? 0 : 24 } }}
+                    variant={isMobile ? 'borderless' : 'outlined'}
+                    style={{ background: isMobile ? 'transparent' : colorBgContainer, boxShadow: 'none' }}
+                >
                     <div style={{ marginBottom: 16, padding: isMobile ? '0 16px' : 0 }}>
                         <Input
                             prefix={<SearchOutlined />}
                             placeholder="Buscar negocio..."
+                            allowClear
                             style={{ width: isMobile ? '100%' : 300 }}
                             onChange={e => setSearchText(e.target.value)}
                         />

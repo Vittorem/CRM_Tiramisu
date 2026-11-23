@@ -107,8 +107,9 @@ export const BehaviorPage = () => {
             'Hibernating': []
         };
 
+        const customerMap = new Map(customers.map(c => [c.id, c]));
         rfmScores.forEach(score => {
-            const cust = customers.find(c => c.id === score.customerId);
+            const cust = customerMap.get(score.customerId);
             if (cust) {
                 map[score.segment].push({
                     ...score,
@@ -138,7 +139,7 @@ export const BehaviorPage = () => {
     if (loadingCustomers || loadingOrders) {
         return (
             <div style={{ padding: 24 }}>
-                <Card bordered={false} style={{ background: colorBgContainer }}>
+                <Card variant="borderless" style={{ background: colorBgContainer }}>
                     <Skeleton active paragraph={{ rows: 8 }} />
                 </Card>
             </div>
@@ -215,7 +216,7 @@ export const BehaviorPage = () => {
                 <Col xs={24} lg={10}>
                     <Card
                         title="Distribución de Clientes"
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.2)' : '0 8px 32px 0 rgba(0,0,0,0.02)',
@@ -289,7 +290,7 @@ export const BehaviorPage = () => {
                                 </div>
                             </div>
                         }
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.2)' : '0 8px 32px 0 rgba(0,0,0,0.02)',
@@ -335,7 +336,7 @@ export const BehaviorPage = () => {
             {/* Customers list for the selected segment */}
             <Card
                 title={<span>👥 Lista de Clientes — Segmento {SEGMENT_DESCRIPTIONS[selectedSegment].title}</span>}
-                bordered={false}
+                variant="borderless"
                 style={{
                     borderRadius: 16,
                     boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.2)' : '0 8px 32px 0 rgba(0,0,0,0.02)',

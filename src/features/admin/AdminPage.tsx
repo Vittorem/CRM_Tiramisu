@@ -387,7 +387,7 @@ export const AdminPage = () => {
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={12} sm={6}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             background: isDarkMode
@@ -408,7 +408,7 @@ export const AdminPage = () => {
                 </Col>
                 <Col xs={12} sm={6}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             background: isDarkMode
@@ -429,7 +429,7 @@ export const AdminPage = () => {
                 </Col>
                 <Col xs={12} sm={6}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             background: isDarkMode
@@ -450,7 +450,7 @@ export const AdminPage = () => {
                 </Col>
                 <Col xs={12} sm={6}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             borderRadius: 16,
                             background: isDarkMode
@@ -473,7 +473,7 @@ export const AdminPage = () => {
 
             {/* Filters */}
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{
                     borderRadius: 16,
                     marginBottom: 16,
@@ -506,7 +506,7 @@ export const AdminPage = () => {
 
             {/* Table */}
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{
                     borderRadius: 16,
                     boxShadow: isDarkMode ? '0 4px 16px rgba(0,0,0,0.2)' : '0 4px 16px rgba(0,0,0,0.03)',

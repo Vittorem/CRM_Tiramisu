@@ -34,7 +34,7 @@ function KPICard(props: { title: string; value: string | number; prefix?: React.
     const isDark = props.isDarkMode;
     return (
         <Card 
-            bordered={false} 
+            variant="borderless" 
             style={{ 
                 borderRadius: 16, 
                 background: isDark 
@@ -139,10 +139,12 @@ export const DashboardPage = () => {
 
     const metrics = useMemo(() => {
         const totalSales = deliveredOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+        const ingredientMap = new Map(ingredients.map(ing => [ing.id, ing]));
+        const customerMap = new Map(customers.map(c => [c.id, c]));
         
         // Calculate costs
         const totalOperationalCosts = deliveredOrders.reduce((acc, o) => {
-            const estimatedCost = calculateOrderEstimatedCost(o, recipes, ingredients);
+            const estimatedCost = calculateOrderEstimatedCost(o, recipes, ingredients, ingredientMap);
             return acc + estimatedCost;
         }, 0);
         
@@ -165,7 +167,7 @@ export const DashboardPage = () => {
         deliveredOrders.forEach(o => {
             if (!o.customerId) return;
             if (!customerStats[o.customerId]) {
-                const cName = customers.find(c => c.id === o.customerId)?.fullName || o.customerName || 'Cliente';
+                const cName = customerMap.get(o.customerId)?.fullName || o.customerName || 'Cliente';
                 customerStats[o.customerId] = { name: cName, qty: 0, revenue: 0 };
             }
             customerStats[o.customerId].qty += 1;

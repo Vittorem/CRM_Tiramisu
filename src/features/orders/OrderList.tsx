@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Table, Tag, Space, Button, Input, Select, List as AntList, Card, Modal, Typography, theme } from 'antd';
 import { EditOutlined, DeleteOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons';
 import { SwipeableList, SwipeableListItem, SwipeAction, TrailingActions, LeadingActions } from 'react-swipeable-list';
@@ -49,39 +49,45 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
     const isMobile = useIsMobile();
     const { token: { colorBgContainer, colorBorderSecondary, colorTextSecondary, colorText, colorPrimary, colorFillAlter } } = theme.useToken();
 
-    const filteredData = orders
-        .filter(o => {
-            const matchesSearch =
-                (o.customerName || '').toLowerCase().includes(searchText.toLowerCase()) ||
-                (o.notes || '').toLowerCase().includes(searchText.toLowerCase());
-            const matchesStatus = statusFilter ? o.status === statusFilter : true;
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            // On mobile, sort by status priority first, then by delivery date
-            if (isMobile) {
-                const priorityA = STATUS_PRIORITY[a.status] ?? 99;
-                const priorityB = STATUS_PRIORITY[b.status] ?? 99;
-                if (priorityA !== priorityB) return priorityA - priorityB;
-            }
-            const aDate = toDay(a.deliveryDate);
-            const bDate = toDay(b.deliveryDate);
-            return (bDate?.valueOf() ?? 0) - (aDate?.valueOf() ?? 0);
-        });
+    const filteredData = useMemo(() => {
+        const lowerSearch = searchText.toLowerCase();
+        return orders
+            .filter(o => {
+                const matchesSearch =
+                    (o.customerName || '').toLowerCase().includes(lowerSearch) ||
+                    (o.notes || '').toLowerCase().includes(lowerSearch);
+                const matchesStatus = statusFilter ? o.status === statusFilter : true;
+                return matchesSearch && matchesStatus;
+            })
+            .sort((a, b) => {
+                // On mobile, sort by status priority first, then by delivery date
+                if (isMobile) {
+                    const priorityA = STATUS_PRIORITY[a.status] ?? 99;
+                    const priorityB = STATUS_PRIORITY[b.status] ?? 99;
+                    if (priorityA !== priorityB) return priorityA - priorityB;
+                }
+                const aDate = toDay(a.deliveryDate);
+                const bDate = toDay(b.deliveryDate);
+                return (bDate?.valueOf() ?? 0) - (aDate?.valueOf() ?? 0);
+            });
+    }, [orders, searchText, statusFilter, isMobile]);
 
     // #5 — Group orders by status for section headers on mobile
-    const getStatusGroups = () => {
+    const { statusGroups, statusCounts } = useMemo(() => {
         const groups: { status: string; startIndex: number }[] = [];
+        const counts: Record<string, number> = {};
+        if (!isMobile) return { statusGroups: groups, statusCounts: counts };
+
         let lastStatus = '';
         filteredData.forEach((item, index) => {
+            counts[item.status] = (counts[item.status] || 0) + 1;
             if (item.status !== lastStatus) {
                 groups.push({ status: item.status, startIndex: index });
                 lastStatus = item.status;
             }
         });
-        return groups;
-    };
-    const statusGroups = isMobile ? getStatusGroups() : [];
+        return { statusGroups: groups, statusCounts: counts };
+    }, [filteredData, isMobile]);
 
     // #3 — Delete with confirmation
     const handleDeleteConfirm = (id: string, customerName: string) => {
@@ -118,7 +124,7 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
             title: 'Total',
             dataIndex: 'total',
             key: 'total',
-            render: (val: number) => `$${val.toFixed(2)}`,
+            render: (val?: number) => `$${(val ?? 0).toFixed(2)}`,
         },
         {
             title: 'Pago',
@@ -150,8 +156,21 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
             key: 'actions',
             render: (_: unknown, record: Order) => (
                 <Space>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
-                    <Button icon={<DeleteOutlined />} size="small" danger onClick={() => onDelete(record.id)} />
+                    <Button
+                        icon={<EditOutlined />}
+                        size="small"
+                        title="Editar pedido"
+                        aria-label="Editar pedido"
+                        onClick={() => onEdit(record)}
+                    />
+                    <Button
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        danger
+                        title="Eliminar pedido"
+                        aria-label="Eliminar pedido"
+                        onClick={() => handleDeleteConfirm(record.id, record.customerName || 'este cliente')}
+                    />
                 </Space>
             ),
         },
@@ -162,7 +181,13 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
             {/* Desktop: original search + filter */}
             {!isMobile && (
                 <Space style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap' }}>
-                    <Input placeholder="Buscar cliente..." onChange={e => setSearchText(e.target.value)} style={{ width: 200 }} />
+                    <Input
+                        prefix={<SearchOutlined />}
+                        placeholder="Buscar cliente..."
+                        allowClear
+                        onChange={e => setSearchText(e.target.value)}
+                        style={{ width: 220 }}
+                    />
                     <Select
                         placeholder="Filtrar Estado"
                         allowClear
@@ -235,7 +260,7 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
 
                             // #5 — Section header for status group
                             const statusGroup = statusGroups.find(g => g.startIndex === index);
-                            const groupCount = filteredData.filter(o => o.status === item.status).length;
+                            const groupCount = statusCounts[item.status] || 0;
 
                             const leadingActions = () => (
                                 <LeadingActions>
@@ -295,12 +320,12 @@ export const OrderList = ({ orders, onEdit, onDelete, onStatusChange }: OrderLis
                                                 border: `1px solid ${colorBorderSecondary}`,
                                                 background: colorBgContainer
                                             }}
-                                            bodyStyle={{ padding: '12px 16px', cursor: 'pointer' }}
+                                            styles={{ body: { padding: '12px 16px', cursor: 'pointer' } }}
                                             onClick={() => onEdit(item)}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                                                 <strong style={{ fontSize: 16, color: colorText }}>{item.customerName}</strong>
-                                                <strong style={{ fontSize: 16, color: colorText }}>${item.total.toFixed(2)}</strong>
+                                                <strong style={{ fontSize: 16, color: colorText }}>${(item.total ?? 0).toFixed(2)}</strong>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: colorTextSecondary }}>
                                                 <div>{item.deliveryMethod === 'Envío' ? '🚚' : '🏪'} {toDay(item.deliveryDate)?.format('DD/MM HH:mm')}</div>

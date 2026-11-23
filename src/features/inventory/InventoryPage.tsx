@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Row, Col, Skeleton, theme } from 'antd';
+import { Table, Button, Drawer, Form, Input, InputNumber, Select, Tag, Space, message, Card, Tabs, List as AntList, Typography, Row, Col, Skeleton, Popconfirm, theme } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined, CalculatorOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { InventoryItem, Order, Recipe, Ingredient } from '../../types';
@@ -36,10 +36,19 @@ function InventoryList({ items, onEdit, onDelete, onMovement }: {
             key: 'actions',
             render: (_: unknown, record: InventoryItem) => (
                 <Space>
-                    <Button icon={<ArrowUpOutlined />} size="small" onClick={() => onMovement(record, 'IN')} title="Entrada" />
-                    <Button icon={<ArrowDownOutlined />} size="small" onClick={() => onMovement(record, 'OUT')} title="Salida" />
-                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} />
-                    <Button icon={<DeleteOutlined />} size="small" danger onClick={() => onDelete(record.id)} />
+                    <Button icon={<ArrowUpOutlined />} size="small" onClick={() => onMovement(record, 'IN')} title="Entrada" aria-label="Registrar entrada" />
+                    <Button icon={<ArrowDownOutlined />} size="small" onClick={() => onMovement(record, 'OUT')} title="Salida" aria-label="Registrar salida" />
+                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)} title="Editar" aria-label="Editar insumo" />
+                    <Popconfirm
+                        title="¿Eliminar insumo?"
+                        description={`Se eliminará "${record.name}" del inventario.`}
+                        okText="Eliminar"
+                        cancelText="Cancelar"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => onDelete(record.id)}
+                    >
+                        <Button icon={<DeleteOutlined />} size="small" danger title="Eliminar" aria-label="Eliminar insumo" />
+                    </Popconfirm>
                 </Space>
             ),
         },
@@ -61,12 +70,21 @@ function InventoryList({ items, onEdit, onDelete, onMovement }: {
                         <div style={{ color: colorTextSecondary, fontSize: 13, margin: '8px 0' }}>📂 {item.category}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Space>
-                                <Button icon={<ArrowUpOutlined />} onClick={() => onMovement(item, 'IN')} />
-                                <Button icon={<ArrowDownOutlined />} onClick={() => onMovement(item, 'OUT')} />
+                                <Button icon={<ArrowUpOutlined />} onClick={() => onMovement(item, 'IN')} title="Entrada" aria-label="Registrar entrada" />
+                                <Button icon={<ArrowDownOutlined />} onClick={() => onMovement(item, 'OUT')} title="Salida" aria-label="Registrar salida" />
                             </Space>
                             <Space>
-                                <Button icon={<EditOutlined />} onClick={() => onEdit(item)} />
-                                <Button icon={<DeleteOutlined />} danger onClick={() => onDelete(item.id)} />
+                                <Button icon={<EditOutlined />} onClick={() => onEdit(item)} title="Editar" aria-label="Editar insumo" />
+                                <Popconfirm
+                                    title="¿Eliminar insumo?"
+                                    description={`Se eliminará "${item.name}" del inventario.`}
+                                    okText="Eliminar"
+                                    cancelText="Cancelar"
+                                    okButtonProps={{ danger: true }}
+                                    onConfirm={() => onDelete(item.id)}
+                                >
+                                    <Button icon={<DeleteOutlined />} danger title="Eliminar" aria-label="Eliminar insumo" />
+                                </Popconfirm>
                             </Space>
                         </div>
                     </Card>
@@ -91,7 +109,10 @@ function PlanningCalculator({
     recipes: Recipe[];
     ingredients: Ingredient[];
 }) {
-    const activeOrders = orders.filter(o => o.status !== 'Entregado' && o.status !== 'Cancelado');
+    const activeOrders = useMemo(
+        () => orders.filter(o => o.status !== 'Entregado' && o.status !== 'Cancelado'),
+        [orders]
+    );
 
     const suggestions = useMemo(() => {
         return items.filter(i => i.stockPackages <= i.minPackages).map(i => ({
@@ -109,7 +130,7 @@ function PlanningCalculator({
     return (
         <Row gutter={[24, 24]}>
             <Col xs={24} md={12}>
-                <Card title={<><CalculatorOutlined /> Faltantes de Inventario (Compras Urgentes)</>} bordered={false} style={{ borderRadius: 12 }}>
+                <Card title={<><CalculatorOutlined /> Faltantes de Inventario (Compras Urgentes)</>} variant="borderless" style={{ borderRadius: 12 }}>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
                         Items que están por debajo de su stock de seguridad establecido.
                     </Text>
@@ -132,7 +153,7 @@ function PlanningCalculator({
                 </Card>
             </Col>
             <Col xs={24} md={12}>
-                <Card title={<><CalculatorOutlined /> Explosión de Insumos (Producción Activa)</>} bordered={false} style={{ borderRadius: 12 }}>
+                <Card title={<><CalculatorOutlined /> Explosión de Insumos (Producción Activa)</>} variant="borderless" style={{ borderRadius: 12 }}>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
                         Materia prima necesaria para producir los {activeOrders.length} pedido(s) activos.
                     </Text>

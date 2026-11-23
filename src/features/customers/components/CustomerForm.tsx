@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Drawer, Form, Input, Select, Button, InputNumber, Row, Col, Space, Divider, Switch, Tabs, Timeline, Card, Tag, theme } from 'antd';
 import { Customer, Order } from '../../../types';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
-import dayjs from 'dayjs';
+import { toDay } from '../../../utils/dateHelpers';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
 interface CustomerFormProps {
@@ -21,16 +21,21 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
     const isMobile = useIsMobile();
     const { token } = theme.useToken();
 
-    const { data: orders } = useFirestoreSubscription<Order>('orders');
+    const { data: orders } = useFirestoreSubscription<Order>('orders', [], {
+        enabled: open && Boolean(initialValues),
+    });
 
-    // Sort logic
-    const customerOrders = initialValues
-        ? orders.filter(o => o.customerId === initialValues.id).sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt as any);
-            const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt as any);
-            return dateB.valueOf() - dateA.valueOf();
-        })
-        : [];
+    // Sort logic (memoized)
+    const customerOrders = useMemo(() => {
+        if (!initialValues) return [];
+        return orders
+            .filter(o => o.customerId === initialValues.id)
+            .sort((a, b) => {
+                const dateA = toDay(a.createdAt)?.valueOf() ?? 0;
+                const dateB = toDay(b.createdAt)?.valueOf() ?? 0;
+                return dateB - dateA;
+            });
+    }, [orders, initialValues]);
 
     const isSubmittingRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,19 +75,19 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                 <Switch />
             </Form.Item>
             <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="fullName" label="Nombre Completo" rules={[{ required: true, message: 'Ingresa el nombre' }]}>
                         <Input placeholder="Ej. Ana Pérez" />
                     </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="phone" label="Teléfono" rules={[{ required: true, message: 'Ingresa el teléfono' }]}>
                         <Input placeholder="55 1234 5678" />
                     </Form.Item>
                 </Col>
             </Row>
             <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="mainContactMethod" label="Medio de contacto principal" rules={[{ required: true }]}>
                         <Select>
                             <Option value="Instagram">Instagram</Option>
@@ -92,7 +97,7 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                         </Select>
                     </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="type" label="Tipo de Cliente" rules={[{ required: true }]}>
                         <Select>
                             <Option value="B2C">Individual (B2C)</Option>
@@ -105,7 +110,7 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
             <Divider plain>Perfil Demográfico</Divider>
 
             <Row gutter={16}>
-                <Col span={8}>
+                <Col xs={24} sm={8}>
                     <Form.Item name="gender" label="Género">
                         <Select allowClear>
                             <Option value="F">Femenino</Option>
@@ -114,12 +119,12 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                         </Select>
                     </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={12} sm={8}>
                     <Form.Item name="age" label="Edad">
                         <InputNumber style={{ width: '100%' }} min={0} max={120} />
                     </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={12} sm={8}>
                     <Form.Item name="civilStatus" label="Estado Civil">
                         <Select allowClear>
                             <Option value="Soltero/a">Soltero/a</Option>
@@ -130,13 +135,13 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                 </Col>
             </Row>
             <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="occupation" label="Ocupación">
                         <Input placeholder="Ej. Abogada" />
                     </Form.Item>
                 </Col>
                 {!isMobile && (
-                    <Col span={12}>
+                    <Col xs={24} sm={12}>
                         <Form.Item name="email" label="Email (Opcional)">
                             <Input type="email" />
                         </Form.Item>
@@ -148,12 +153,12 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
 
             {!isMobile && (
                 <Row gutter={16}>
-                    <Col span={12}>
+                    <Col xs={24} sm={12}>
                         <Form.Item name="instagramHandle" label="Instagram User">
                             <Input prefix="@" />
                         </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col xs={24} sm={12}>
                         <Form.Item name="facebookLink" label="Facebook Link">
                             <Input />
                         </Form.Item>
@@ -161,12 +166,12 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                 </Row>
             )}
             <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="colonia" label="Colonia">
                         <Input />
                     </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                     <Form.Item name="city" label="Ciudad">
                         <Input />
                     </Form.Item>
@@ -243,28 +248,28 @@ export const CustomerForm = ({ open, onClose, onSubmit, initialValues, loading }
                                 <Card size="small" style={{ marginBottom: 24, borderRadius: 12, border: 'none', background: token.colorFillAlter, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                                     <Row gutter={16} align="middle">
                                         <Col span={12} style={{ textAlign: 'center' }}>
-                                            <div style={{ fontSize: 12, color: 'gray' }}>Pedidos</div>
-                                            <div style={{ fontSize: 20, fontWeight: 'bold' }}>{customerOrders.length}</div>
+                                            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>Pedidos</div>
+                                            <div style={{ fontSize: 20, fontWeight: 'bold', color: token.colorText }}>{customerOrders.length}</div>
                                         </Col>
                                         <Col span={12} style={{ textAlign: 'center', borderLeft: `1px solid ${token.colorBorderSecondary}` }}>
-                                            <div style={{ fontSize: 12, color: 'gray' }}>Ticket Histórico</div>
-                                            <div style={{ fontSize: 20, fontWeight: 'bold' }}>${customerOrders.reduce((sum, o) => sum + (o.total || 0), 0).toFixed(2)}</div>
+                                            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>Ticket Histórico</div>
+                                            <div style={{ fontSize: 20, fontWeight: 'bold', color: token.colorText }}>${customerOrders.reduce((sum, o) => sum + (o.total || 0), 0).toFixed(2)}</div>
                                         </Col>
                                     </Row>
                                 </Card>
                                 {customerOrders.length === 0 ? (
-                                    <div style={{ textAlign: 'center', color: 'gray', padding: 40 }}>Este cliente aún no tiene historial de compras.</div>
+                                    <div style={{ textAlign: 'center', color: token.colorTextSecondary, padding: 40 }}>Este cliente aún no tiene historial de compras.</div>
                                 ) : (
                                     <Timeline
                                         items={customerOrders.map(o => ({
                                             color: o.status === 'Entregado' ? 'green' : o.status === 'Cancelado' ? 'red' : 'blue',
                                             children: (
                                                 <div style={{ paddingBottom: 12 }}>
-                                                    <div style={{ fontWeight: 'bold' }}>{dayjs(o.createdAt?.toDate?.() || o.createdAt).format('DD MMM YYYY, HH:mm')}</div>
-                                                    <div style={{ color: 'gray', fontSize: 13, marginBottom: 4 }}>
+                                                    <div style={{ fontWeight: 'bold', color: token.colorText }}>{toDay(o.createdAt)?.format('DD MMM YYYY, HH:mm') ?? '-'}</div>
+                                                    <div style={{ color: token.colorTextSecondary, fontSize: 13, marginBottom: 4 }}>
                                                         {o.items?.map(i => `${i.quantity}x ${i.productNameAtSale}`).join(', ') || `${o.quantity || 1}x ${o.productNameAtSale}`}
                                                     </div>
-                                                    <div style={{ fontWeight: 500, color: '#333' }}>Total: ${o.total.toFixed(2)} — <Tag color={o.status === 'Entregado' ? 'green' : 'blue'}>{o.status}</Tag></div>
+                                                    <div style={{ fontWeight: 500, color: token.colorText }}>Total: ${(o.total ?? 0).toFixed(2)} — <Tag color={o.status === 'Entregado' ? 'green' : 'blue'}>{o.status}</Tag></div>
                                                 </div>
                                             )
                                         }))}

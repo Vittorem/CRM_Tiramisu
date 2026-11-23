@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Table, Button, Input, Space, Tag, Popconfirm, message, Card, List as AntList, Skeleton, theme } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
@@ -60,10 +60,14 @@ export const CustomerList = () => {
         }
     };
 
-    const filteredData = customers.filter(c =>
-        c.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-        c.phone.includes(searchText)
-    );
+    const filteredData = useMemo(() => {
+        const q = searchText.toLowerCase();
+        if (!q) return customers;
+        return customers.filter(c =>
+            (c.fullName || '').toLowerCase().includes(q) ||
+            (c.phone || '').includes(searchText)
+        );
+    }, [customers, searchText]);
 
     const columns = [
         {
@@ -107,9 +111,21 @@ export const CustomerList = () => {
             key: 'actions',
             render: (_: unknown, record: Customer) => (
                 <Space>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => handleEdit(record)} />
+                    <Button
+                        icon={<EditOutlined />}
+                        size="small"
+                        title="Editar cliente"
+                        aria-label="Editar cliente"
+                        onClick={() => handleEdit(record)}
+                    />
                     <Popconfirm title="¿Eliminar cliente?" description="Esto es una eliminación lógica." onConfirm={() => handleDelete(record.id)}>
-                        <Button icon={<DeleteOutlined />} size="small" danger />
+                        <Button
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            danger
+                            title="Eliminar cliente"
+                            aria-label="Eliminar cliente"
+                        />
                     </Popconfirm>
                 </Space>
             ),
@@ -125,11 +141,16 @@ export const CustomerList = () => {
                 </Button>
             </div>
 
-            <Card bodyStyle={{ padding: isMobile ? 0 : 24 }} bordered={!isMobile} style={{ background: isMobile ? 'transparent' : colorBgContainer, boxShadow: 'none' }}>
+            <Card
+                styles={{ body: { padding: isMobile ? 0 : 24 } }}
+                variant={isMobile ? 'borderless' : 'outlined'}
+                style={{ background: isMobile ? 'transparent' : colorBgContainer, boxShadow: 'none' }}
+            >
                 <div style={{ marginBottom: 16, padding: isMobile ? '0 16px' : 0 }}>
                     <Input
                         prefix={<SearchOutlined />}
                         placeholder="Buscar por nombre o teléfono..."
+                        allowClear
                         style={{ width: isMobile ? '100%' : 300 }}
                         onChange={e => setSearchText(e.target.value)}
                     />

@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
-import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, Grid, TimePicker, Checkbox, theme, Tag } from 'antd';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Drawer, Form, Select, DatePicker, InputNumber, Radio, Divider, Input, Button, Space, Typography, Row, Col, TimePicker, Checkbox, theme, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription } from '../../../hooks/useFirestore';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import { Customer, Product, Flavor, Channel, Order, ORDER_STATUSES, OrderItem, PAYMENT_STATUSES } from '../../../types';
 import dayjs from 'dayjs';
 
@@ -24,19 +25,26 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const hasDiscount = Form.useWatch('hasDiscount', form);
     const hasExtraCharges = Form.useWatch('hasExtraCharges', form);
 
-    const { useBreakpoint } = Grid;
-    const screens = useBreakpoint();
-    const isMobile = screens.md === false;
+    const isMobile = useIsMobile();
     const { token } = theme.useToken();
 
-    // Catalogs & Data
-    const { data: customers } = useFirestoreSubscription<Customer>('customers');
-    const { data: products } = useFirestoreSubscription<Product>('catalog_products');
-    const { data: flavors } = useFirestoreSubscription<Flavor>('catalog_flavors');
-    const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels');
+    // Catalogs & Data (deferred until Drawer is open; shares deduplicated Firestore cache)
+    const { data: customers } = useFirestoreSubscription<Customer>('customers', [], { enabled: open });
+    const { data: products } = useFirestoreSubscription<Product>('catalog_products', [], { enabled: open });
+    const { data: flavors } = useFirestoreSubscription<Flavor>('catalog_flavors', [], { enabled: open });
+    const { data: channels } = useFirestoreSubscription<Channel>('catalog_channels', [], { enabled: open });
+
+    const customersById = useMemo(() => new Map(customers.map(c => [c.id, c])), [customers]);
+    const productsById = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+    const flavorsById = useMemo(() => new Map(flavors.map(f => [f.id, f])), [flavors]);
+
+    const activeCustomers = useMemo(() => customers.filter(c => c.isActive !== false), [customers]);
+    const activeChannels = useMemo(() => channels.filter(c => c.isActive), [channels]);
+    const activeProducts = useMemo(() => products.filter(p => p.isActive), [products]);
+    const activeFlavors = useMemo(() => flavors.filter(f => f.isActive), [flavors]);
 
     const customerId = Form.useWatch('customerId', form);
-    const selectedCustomer = customers.find(c => c.id === customerId);
+    const selectedCustomer = customerId ? customersById.get(customerId) : undefined;
 
     // Local state for calculations
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0, qty: 0 });
@@ -45,14 +53,12 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     const isSubmittingRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const prefillCustomerData = (customerId: string) => {
+    const prefillCustomerData = (targetCustomerId: string) => {
         try {
-            console.log('Prefilling customer data for ID:', customerId);
-            const customer = customers.find(c => c.id === customerId);
-            console.log('Found customer:', customer);
+            const customer = customersById.get(targetCustomerId);
             if (!customer) return;
 
-            const updates: Record<string, any> = {};
+            const updates: Record<string, unknown> = {};
 
             // 1. Prefill Sale Channel based on type or mainContactMethod
             let matchedChannel;
@@ -81,7 +87,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
 
             if (matchedChannel) {
                 updates.channelId = matchedChannel.id;
-                console.log('Matched channel:', matchedChannel);
             }
 
             // 2. Prefill Delivery Method based on customer type
@@ -94,7 +99,6 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 updates.shippingCost = 0;
             }
 
-            console.log('Applying updates:', updates);
             form.setFieldsValue(updates);
         } catch (err) {
             console.error('Error in prefillCustomerData:', err);
@@ -187,15 +191,16 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
     };
 
     const handleProductChange = (val: string, index: number) => {
-        const prod = products.find(p => p.id === val);
+        const prod = productsById.get(val);
         if (prod) {
-            const items = form.getFieldValue('items') || [];
-            items[index] = {
-                ...items[index],
+            const currentItems = form.getFieldValue('items') || [];
+            const nextItems = [...currentItems];
+            nextItems[index] = {
+                ...nextItems[index],
                 productNameAtSale: prod.name,
                 unitPriceAtSale: prod.price
             };
-            form.setFieldsValue({ items });
+            form.setFieldsValue({ items: nextItems });
             calculateTotals(form.getFieldsValue());
         }
     };
@@ -222,15 +227,15 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
         setIsSubmitting(true);
         try {
             const values = await form.validateFields();
-            const customer = customers.find(c => c.id === values.customerId);
+            const customer = customersById.get(values.customerId);
 
             const items = values.items || [];
 
             const structuredItems: OrderItem[] = items.map((item: any, i: number) => {
                 const pId = item.productId;
                 const fId = item.flavorId;
-                const prod = products.find(p => p.id === pId);
-                const flav = flavors.find(f => f.id === fId);
+                const prod = productsById.get(pId);
+                const flav = flavorsById.get(fId);
 
                 return {
                     id: Date.now().toString() + i,
@@ -313,7 +318,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     <Col xs={24} md={12}>
                         <Form.Item name="customerId" label={<span>Cliente {selectedCustomer && <Tag color={String(selectedCustomer.type || 'B2C').toUpperCase() === 'B2B' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>{String(selectedCustomer.type || 'B2C').toUpperCase()}</Tag>}</span>} rules={[{ required: true }]}>
                             <Select showSearch optionFilterProp="children" placeholder="Selecciona Cliente">
-                                {customers.filter(c => c.isActive !== false).map(c => (
+                                {activeCustomers.map(c => (
                                     <Option key={c.id} value={c.id}>{c.fullName} - {c.phone} ({String(c.type || 'B2C').toUpperCase()})</Option>
                                 ))}
                             </Select>
@@ -322,7 +327,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                     <Col xs={24} md={12}>
                         <Form.Item name="channelId" label="Canal de Venta" rules={[{ required: true }]}>
                             <Select placeholder="Selecciona Canal">
-                                {channels.filter(c => c.isActive).map(c => (
+                                {activeChannels.map(c => (
                                     <Option key={c.id} value={c.id}>{c.name}</Option>
                                 ))}
                             </Select>
@@ -341,7 +346,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                                         <Col xs={24} md={8}>
                                             <Form.Item {...restField} name={[name, 'productId']} label="Producto" rules={[{ required: true }]}>
                                                 <Select onChange={(val) => handleProductChange(val, index)} placeholder="Producto">
-                                                    {products.filter(p => p.isActive).map(p => (
+                                                    {activeProducts.map(p => (
                                                         <Option key={p.id} value={p.id}>{p.name} (${p.price})</Option>
                                                     ))}
                                                 </Select>
@@ -351,7 +356,7 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                                         <Col xs={24} md={8}>
                                             <Form.Item {...restField} name={[name, 'flavorId']} label="Sabor" rules={[{ required: true }]}>
                                                 <Select placeholder="Sabor">
-                                                    {flavors.filter(f => f.isActive).map(f => (
+                                                    {activeFlavors.map(f => (
                                                         <Option key={f.id} value={f.id}>{f.name}</Option>
                                                     ))}
                                                 </Select>
@@ -402,14 +407,14 @@ export const OrderForm = ({ open, onClose, onSubmit, initialValues, loading, pre
                 <Divider orientation="left">Entrega & Cobro</Divider>
 
                 <Row gutter={16}>
-                    <Col xs={24} md={8} style={{ display: isMobile ? 'none' : 'block' }}>
+                    <Col xs={24} md={8}>
                         <Form.Item label="Fecha y Hora Entrega" required>
                             <Space wrap>
                                 <Form.Item name="deliveryDate" rules={[{ required: true }]} noStyle>
-                                    <DatePicker style={{ width: 130 }} format="DD/MM/YYYY" placeholder="Fecha" />
+                                    <DatePicker style={{ width: isMobile ? 150 : 130 }} format="DD/MM/YYYY" placeholder="Fecha" />
                                 </Form.Item>
                                 <Form.Item name="deliveryTime" rules={[{ required: true }]} noStyle>
-                                    <TimePicker style={{ width: 100 }} format="HH:mm" placeholder="Hora" />
+                                    <TimePicker style={{ width: isMobile ? 110 : 100 }} format="HH:mm" placeholder="Hora" />
                                 </Form.Item>
                             </Space>
                         </Form.Item>

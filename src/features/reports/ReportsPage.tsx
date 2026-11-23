@@ -239,7 +239,7 @@ export const ReportsPage = () => {
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={8}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             borderRadius: 12,
@@ -257,7 +257,7 @@ export const ReportsPage = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                             borderRadius: 12,
@@ -273,7 +273,7 @@ export const ReportsPage = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                     <Card
-                        bordered={false}
+                        variant="borderless"
                         style={{
                             background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                             borderRadius: 12,
@@ -292,7 +292,7 @@ export const ReportsPage = () => {
 
             {/* Export Section */}
             <Card
-                bordered={false}
+                variant="borderless"
                 style={{
                     borderRadius: 12,
                     marginBottom: 24,
@@ -330,7 +330,7 @@ export const ReportsPage = () => {
                 <Col xs={24} lg={12}>
                     <Card
                         title={<><DownloadOutlined /> Exportar Ventas</>}
-                        bordered={false}
+                        variant="borderless"
                         style={{ borderRadius: 12, height: '100%' }}
                         styles={{ body: { display: 'flex', flexDirection: 'column', gap: 12 } }}
                     >
@@ -368,7 +368,7 @@ export const ReportsPage = () => {
                 <Col xs={24} lg={12}>
                     <Card
                         title={<><TeamOutlined /> Exportar Demografía</>}
-                        bordered={false}
+                        variant="borderless"
                         style={{ borderRadius: 12, height: '100%' }}
                         styles={{ body: { display: 'flex', flexDirection: 'column', gap: 12 } }}
                     >
@@ -412,7 +412,7 @@ export const ReportsPage = () => {
                     <Col xs={24} md={8}>
                         <Card
                             title="Distribución por Género"
-                            bordered={false}
+                            variant="borderless"
                             style={{ borderRadius: 12, textAlign: 'center' }}
                         >
                             <ResponsiveContainer width="100%" height={200}>
@@ -458,7 +458,7 @@ export const ReportsPage = () => {
                     <Col xs={24} md={8}>
                         <Card
                             title="Distribución por Edad"
-                            bordered={false}
+                            variant="borderless"
                             style={{ borderRadius: 12 }}
                         >
                             <ResponsiveContainer width="100%" height={200}>
@@ -486,7 +486,7 @@ export const ReportsPage = () => {
                     <Col xs={24} md={8}>
                         <Card
                             title="Top Ocupaciones"
-                            bordered={false}
+                            variant="borderless"
                             style={{ borderRadius: 12 }}
                         >
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 200, justifyContent: 'center' }}>
@@ -511,7 +511,7 @@ export const ReportsPage = () => {
                     </Col>
                 </Row>
             ) : (
-                <Card bordered={false} style={{ borderRadius: 12, textAlign: 'center', padding: 40 }}>
+                <Card variant="borderless" style={{ borderRadius: 12, textAlign: 'center', padding: 40 }}>
                     <Empty
                         description={
                             <span>
@@ -523,7 +523,7 @@ export const ReportsPage = () => {
             )}
 
             <Divider orientation="left"><DollarOutlined /> Rentabilidad de Productos</Divider>
-            <Card bordered={false} style={{ borderRadius: 12, marginBottom: 24 }}>
+            <Card variant="borderless" style={{ borderRadius: 12, marginBottom: 24 }}>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
                     Análisis de precios de catálogo contra costos teóricos de recetas e impacto en ganancia del periodo seleccionado.
                 </Text>

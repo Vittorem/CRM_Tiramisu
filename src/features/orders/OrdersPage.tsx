@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Button, Segmented, message, DatePicker, Skeleton, Space, Checkbox } from 'antd';
+import { Button, Segmented, message, DatePicker, Skeleton, Space, Checkbox, theme } from 'antd';
 import { PlusOutlined, UnorderedListOutlined, AppstoreOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../hooks/useFirestore';
 import { Order, OrderStatus, B2BDeliverySchedule } from '../../types';
@@ -23,6 +23,7 @@ export const OrdersPage = () => {
 
     const isMobile = useIsMobile();
     const location = useLocation();
+    const { token } = theme.useToken();
 
     const [viewMode, setViewMode] = useState<'Kanban' | 'List'>('Kanban');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -120,12 +121,14 @@ export const OrdersPage = () => {
         if (navigator.vibrate) navigator.vibrate(50);
     };
 
-    const filteredOrders = orders.filter(o => {
-        if (!showCancelled && o.status === 'Cancelado') return false;
-        const date = getOrderDate(o);
-        if (!date) return false;
-        return date.isSame(selectedMonth, 'month') && date.isSame(selectedMonth, 'year');
-    });
+    const filteredOrders = useMemo(() => {
+        return orders.filter(o => {
+            if (!showCancelled && o.status === 'Cancelado') return false;
+            const date = getOrderDate(o);
+            if (!date) return false;
+            return date.isSame(selectedMonth, 'month') && date.isSame(selectedMonth, 'year');
+        });
+    }, [orders, showCancelled, selectedMonth]);
 
     const cancelledCount = useMemo(() => {
         return orders.filter(o => {
@@ -175,8 +178,8 @@ export const OrdersPage = () => {
             {/* B2B Delivery Alert Banner */}
             {pendingB2BAlerts.length > 0 && (
                 <div style={{
-                    background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)',
-                    border: '1px solid #ffe58f',
+                    background: token.colorWarningBg,
+                    border: `1px solid ${token.colorWarningBorder}`,
                     borderRadius: 10,
                     padding: isMobile ? '10px 12px' : '12px 16px',
                     marginBottom: 16,
@@ -184,7 +187,7 @@ export const OrdersPage = () => {
                     flexDirection: 'column',
                     gap: 8,
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: '#d48806', fontSize: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: token.colorWarningText, fontSize: 14 }}>
                         <SendOutlined /> Entregas B2B Pendientes
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -195,22 +198,24 @@ export const OrdersPage = () => {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    background: '#fff',
+                                    background: token.colorBgContainer,
                                     borderRadius: 8,
                                     padding: '8px 12px',
-                                    border: alert.urgency === 'today' ? '1px solid #ff7a45' : '1px solid #ffd591',
+                                    border: alert.urgency === 'today'
+                                        ? `1px solid ${token.colorErrorBorder}`
+                                        : `1px solid ${token.colorWarningBorder}`,
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontWeight: 500 }}>{alert.schedule.customerName}</span>
+                                    <span style={{ fontWeight: 500, color: token.colorText }}>{alert.schedule.customerName}</span>
                                     <span style={{
                                         fontSize: 11,
                                         padding: '1px 8px',
                                         borderRadius: 10,
                                         fontWeight: 600,
-                                        background: alert.urgency === 'today' ? '#fff2e8' : '#fffbe6',
-                                        color: alert.urgency === 'today' ? '#d4380d' : '#d48806',
-                                        border: `1px solid ${alert.urgency === 'today' ? '#ffbb96' : '#ffe58f'}`,
+                                        background: alert.urgency === 'today' ? token.colorErrorBg : token.colorWarningBg,
+                                        color: alert.urgency === 'today' ? token.colorErrorText : token.colorWarningText,
+                                        border: `1px solid ${alert.urgency === 'today' ? token.colorErrorBorder : token.colorWarningBorder}`,
                                     }}>
                                         {alert.urgency === 'today' ? `HOY ${alert.deliveryDay}` : `Mañana ${alert.deliveryDay}`}
                                     </span>

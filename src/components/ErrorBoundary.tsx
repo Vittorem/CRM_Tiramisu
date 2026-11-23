@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { Result, Button } from 'antd';
+import { Result, Button, Space } from 'antd';
 
 interface Props {
     children: ReactNode;
@@ -28,17 +28,24 @@ export class ErrorBoundary extends Component<Props, State> {
         this.setState({ hasError: false, error: null });
     };
 
+    handleReload = () => {
+        window.location.href = '/';
+    };
+
     render() {
         if (this.state.hasError) {
             return (
                 <Result
                     status="error"
                     title="Algo salió mal"
-                    subTitle="Ha ocurrido un error inesperado. Por favor, intenta de nuevo o contacta a soporte."
+                    subTitle="Ha ocurrido un error inesperado. Puedes reintentar o recargar la aplicación."
                     extra={
-                        <Button type="primary" onClick={this.handleReset}>
-                            Reintentar
-                        </Button>
+                        <Space>
+                            <Button onClick={this.handleReset}>Reintentar</Button>
+                            <Button type="primary" onClick={this.handleReload}>
+                                Recargar aplicación
+                            </Button>
+                        </Space>
                     }
                 />
             );

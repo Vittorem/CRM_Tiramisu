@@ -81,6 +81,8 @@ export const GlobalAlerts = () => {
                     type="text"
                     icon={<BellOutlined style={{ fontSize: 20 }} />}
                     onClick={() => setIsOpen(true)}
+                    aria-label="Centro de notificaciones"
+                    title="Notificaciones"
                     style={{ color: 'inherit' }}
                 />
             </Badge>
