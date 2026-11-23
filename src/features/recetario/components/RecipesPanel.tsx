@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef } from 'react';
-import { Button, Modal, Form, Input, InputNumber, Select, Typography, Spin, Popconfirm, message, Switch, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Modal, Form, Input, InputNumber, Select, Typography, Spin, Popconfirm, message, Switch, Row, Col, Dropdown } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, UploadOutlined, DownloadOutlined, FileExcelOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../../hooks/useFirestore';
 import { Recipe, Ingredient, RecipeIngredient, Product, Flavor } from '../../../types';
+import { exportRecipesExcel, exportRecipesXML } from '../../../services/exportService';
 import { theme as antdTheme } from 'antd';
 
 const { Title } = Typography;
@@ -25,17 +26,49 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
     const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
     const [form] = Form.useForm();
     const [submitting, setSubmitting] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [searchText, setSearchText] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const ingredientMap = useMemo(
+        () => new Map((ingredients || []).map(ing => [ing.id, ing])),
+        [ingredients]
+    );
+
     // Dynamic cost calculation
     const calculateRecipeCost = (recipe: Recipe) => {
-        if (!ingredients || !recipe.ingredients) return 0;
+        if (!recipe.ingredients) return 0;
         return recipe.ingredients.reduce((total, ri) => {
-            const ingredient = ingredients.find(ing => ing.id === ri.ingredientId);
+            const ingredient = ingredientMap.get(ri.ingredientId);
             if (!ingredient) return total;
             return total + (ingredient.cost_unit * ri.qty);
         }, 0);
+    };
+
+    const handleExportRecipesExcel = async () => {
+        if (!recipes?.length) {
+            message.warning('No hay recetas para exportar.');
+            return;
+        }
+        setExporting(true);
+        try {
+            await exportRecipesExcel(recipes, ingredients || [], products || [], flavors || []);
+            message.success('Excel de recetas (Costos vs Precios) descargado');
+        } catch (err) {
+            console.error('Error exporting recipes Excel:', err);
+            message.error('Error al exportar recetas a Excel');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleExportRecipesXML = () => {
+        if (!recipes?.length) {
+            message.warning('No hay recetas para exportar.');
+            return;
+        }
+        exportRecipesXML(recipes, ingredients || [], products || [], flavors || []);
+        message.success('XML de recetas descargado');
     };
 
     const handleOpenModal = (recipe?: Recipe, isDuplicate = false) => {
@@ -189,6 +222,29 @@ export const RecipesPanel = ({ onSelectRecipe, selectedRecipeId, onClearSelectio
                         <Button type="dashed" icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()} className="flex-1">
                             Importar
                         </Button>
+                        <Dropdown
+                            disabled={!recipes?.length}
+                            menu={{
+                                items: [
+                                    {
+                                        key: 'excel',
+                                        icon: <FileExcelOutlined style={{ color: '#10b981' }} />,
+                                        label: 'Excel (Costos vs Precios)',
+                                        onClick: handleExportRecipesExcel,
+                                    },
+                                    {
+                                        key: 'xml',
+                                        icon: <FileTextOutlined />,
+                                        label: 'XML (Recetario Completo)',
+                                        onClick: handleExportRecipesXML,
+                                    },
+                                ],
+                            }}
+                        >
+                            <Button icon={<DownloadOutlined />} loading={exporting} className="flex-1">
+                                Exportar
+                            </Button>
+                        </Dropdown>
                         <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} className="bg-green-500 hover:bg-green-600 border-none rounded shadow-sm flex-1">
                             Nueva Receta
                         </Button>

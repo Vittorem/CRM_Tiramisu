@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Order, Customer, Recipe, Ingredient } from '../types';
+import { Order, Customer, Recipe, Ingredient, Product, Flavor } from '../types';
 import { getOrderDate } from '../utils/dateHelpers';
 import { calculateOrderEstimatedCost } from '../utils/costHelpers';
 import { DemographicResult } from '../utils/demographicsHelpers';
@@ -322,6 +322,177 @@ export function parseIngredientsXML(xmlText: string): ParsedIngredientXML[] {
     }
 
     return parsed;
+}
+
+// ─── Recipes Export (Excel Cost vs Price Analysis & XML) ──────────────────────
+
+interface ComputedRecipeRow {
+    recipe: Recipe;
+    productName: string;
+    flavorName: string;
+    salePrice: number | null;
+    totalCost: number;
+    costPerServing: number;
+    profitPerServing: number | null;
+    marginPercent: number | null;
+    markup: number | null;
+    breakdown: {
+        name: string;
+        qty: number;
+        unit: string;
+        costUnit: number;
+        totalCost: number;
+        costSharePercent: number;
+    }[];
+}
+
+function buildRecipesCostAnalysis(
+    recipes: Recipe[],
+    ingredients: Ingredient[],
+    products: Product[],
+    flavors: Flavor[]
+): ComputedRecipeRow[] {
+    const ingredientMap = new Map(ingredients.map(i => [i.id, i]));
+    const productMap = new Map(products.map(p => [p.id, p]));
+    const flavorMap = new Map(flavors.map(f => [f.id, f]));
+
+    const sorted = [...recipes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    return sorted.map(recipe => {
+        const linkedProduct = recipe.linkedProductId ? productMap.get(recipe.linkedProductId) : undefined;
+        const linkedFlavor = recipe.linkedFlavorId ? flavorMap.get(recipe.linkedFlavorId) : undefined;
+
+        let totalCost = 0;
+        const rawBreakdown = (recipe.ingredients || []).map(ri => {
+            const ing = ingredientMap.get(ri.ingredientId);
+            const qty = Number(ri.qty || 0);
+            const costUnit = Number(ing?.cost_unit || 0);
+            const itemCost = qty * costUnit;
+            totalCost += itemCost;
+            return {
+                name: ing?.name || 'Desconocido',
+                qty,
+                unit: ri.unit || ing?.unit || '',
+                costUnit,
+                totalCost: itemCost,
+            };
+        });
+
+        const breakdown = rawBreakdown.map(b => ({
+            ...b,
+            costSharePercent: totalCost > 0 ? (b.totalCost / totalCost) * 100 : 0,
+        }));
+
+        const servings = recipe.servings_default > 0 ? recipe.servings_default : 1;
+        const costPerServing = totalCost / servings;
+        const salePrice = linkedProduct && typeof linkedProduct.price === 'number' ? linkedProduct.price : null;
+        const profitPerServing = salePrice !== null ? salePrice - costPerServing : null;
+        const marginPercent =
+            salePrice !== null && salePrice > 0 && profitPerServing !== null
+                ? (profitPerServing / salePrice) * 100
+                : null;
+        const markup =
+            salePrice !== null && costPerServing > 0 ? salePrice / costPerServing : null;
+
+        return {
+            recipe,
+            productName: linkedProduct?.name || 'Sin vincular',
+            flavorName: linkedFlavor?.name || 'N/A',
+            salePrice,
+            totalCost,
+            costPerServing,
+            profitPerServing,
+            marginPercent,
+            markup,
+            breakdown,
+        };
+    });
+}
+
+export async function exportRecipesExcel(
+    recipes: Recipe[],
+    ingredients: Ingredient[],
+    products: Product[],
+    flavors: Flavor[]
+) {
+    const XLSX = await import('xlsx');
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    const computed = buildRecipesCostAnalysis(recipes, ingredients, products, flavors);
+
+    const summaryRows = computed.map(row => ({
+        Receta: row.recipe.name,
+        Tipo: row.recipe.is_variant ? 'Variante' : 'Base',
+        Producto_Vinculado: row.productName,
+        Sabor_Vinculado: row.flavorName,
+        Porciones: row.recipe.servings_default || 1,
+        Num_Ingredientes: row.breakdown.length,
+        Costo_Total_Receta: round2(row.totalCost),
+        Costo_Por_Porcion: round2(row.costPerServing),
+        Precio_Venta_Catalogo: row.salePrice !== null ? round2(row.salePrice) : 'Sin precio',
+        Ganancia_Por_Porcion: row.profitPerServing !== null ? round2(row.profitPerServing) : 'N/A',
+        Margen_Pct: row.marginPercent !== null ? `${row.marginPercent.toFixed(1)}%` : 'N/A',
+        Multiplicador_Precio_Costo: row.markup !== null ? `${row.markup.toFixed(2)}x` : 'N/A',
+    }));
+
+    const detailRows = computed.flatMap(row =>
+        row.breakdown.map(b => ({
+            Receta: row.recipe.name,
+            Porciones: row.recipe.servings_default || 1,
+            Ingrediente: b.name,
+            Cantidad: round2(b.qty),
+            Unidad: b.unit,
+            Costo_Unitario: round2(b.costUnit),
+            Costo_En_Receta: round2(b.totalCost),
+            Peso_En_Costo_Pct: `${b.costSharePercent.toFixed(1)}%`,
+        }))
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Costos vs Precios');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), 'Desglose Ingredientes');
+    XLSX.writeFile(wb, `Recetas_Costos_Precios_${dayjs().format('YYYYMMDD')}.xlsx`);
+}
+
+export function exportRecipesXML(
+    recipes: Recipe[],
+    ingredients: Ingredient[],
+    products: Product[],
+    flavors: Flavor[]
+) {
+    const computed = buildRecipesCostAnalysis(recipes, ingredients, products, flavors);
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<recetas>\n';
+
+    computed.forEach(row => {
+        xml += '  <receta>\n';
+        xml += `    <id>${escapeXml(row.recipe.id)}</id>\n`;
+        xml += `    <nombre>${escapeXml(row.recipe.name)}</nombre>\n`;
+        xml += `    <esVariante>${row.recipe.is_variant ? 'true' : 'false'}</esVariante>\n`;
+        xml += `    <porciones>${row.recipe.servings_default || 1}</porciones>\n`;
+        xml += `    <productoVinculado>${escapeXml(row.productName)}</productoVinculado>\n`;
+        xml += `    <saborVinculado>${escapeXml(row.flavorName)}</saborVinculado>\n`;
+        xml += `    <costoTotal>${row.totalCost.toFixed(2)}</costoTotal>\n`;
+        xml += `    <costoPorPorcion>${row.costPerServing.toFixed(2)}</costoPorPorcion>\n`;
+        xml += `    <precioVenta>${row.salePrice !== null ? row.salePrice.toFixed(2) : ''}</precioVenta>\n`;
+        xml += `    <gananciaPorPorcion>${row.profitPerServing !== null ? row.profitPerServing.toFixed(2) : ''}</gananciaPorPorcion>\n`;
+        xml += `    <margenPorcentaje>${row.marginPercent !== null ? row.marginPercent.toFixed(1) : ''}</margenPorcentaje>\n`;
+        xml += '    <ingredientes>\n';
+        row.breakdown.forEach(b => {
+            xml += '      <ingrediente>\n';
+            xml += `        <nombre>${escapeXml(b.name)}</nombre>\n`;
+            xml += `        <cantidad>${b.qty}</cantidad>\n`;
+            xml += `        <unidad>${escapeXml(b.unit)}</unidad>\n`;
+            xml += `        <costoUnitario>${b.costUnit.toFixed(2)}</costoUnitario>\n`;
+            xml += `        <costoTotal>${b.totalCost.toFixed(2)}</costoTotal>\n`;
+            xml += `        <pesoEnCostoPorcentaje>${b.costSharePercent.toFixed(1)}</pesoEnCostoPorcentaje>\n`;
+            xml += '      </ingrediente>\n';
+        });
+        xml += '    </ingredientes>\n';
+        xml += '  </receta>\n';
+    });
+
+    xml += '</recetas>';
+    downloadBlob(xml, 'application/xml', `Recetas_Costos_Precios_${dayjs().format('YYYYMMDD')}.xml`);
 }
 
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
