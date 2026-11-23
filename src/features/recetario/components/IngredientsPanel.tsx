@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Button, Modal, Form, Input, InputNumber, Select, Typography, Popconfirm, message, Table, theme } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useFirestoreSubscription, useFirestoreMutation } from '../../../hooks/useFirestore';
 import { Ingredient, Recipe } from '../../../types';
+import { exportIngredientsXML, parseIngredientsXML } from '../../../services/exportService';
 
 const { Title } = Typography;
 
@@ -16,7 +17,76 @@ export const IngredientsPanel = () => {
     const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
     const [form] = Form.useForm();
     const [submitting, setSubmitting] = useState(false);
+    const [importingXml, setImportingXml] = useState(false);
     const [searchText, setSearchText] = useState('');
+    const xmlInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDownloadXML = () => {
+        if (!ingredients || ingredients.length === 0) {
+            message.warning('No hay ingredientes para exportar.');
+            return;
+        }
+        exportIngredientsXML(ingredients);
+        message.success('Archivo XML de insumos descargado');
+    };
+
+    const handleUploadXML = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            setImportingXml(true);
+            try {
+                const xmlText = String(event.target?.result || '');
+                const parsedItems = parseIngredientsXML(xmlText);
+
+                const byId = new Map((ingredients || []).map(i => [i.id, i]));
+                const byName = new Map(
+                    (ingredients || []).map(i => [i.name.trim().toLowerCase(), i])
+                );
+
+                let created = 0;
+                let updated = 0;
+
+                for (const item of parsedItems) {
+                    const existing =
+                        (item.id ? byId.get(item.id) : undefined) ||
+                        byName.get(item.name.trim().toLowerCase());
+
+                    if (existing) {
+                        await update(existing.id, {
+                            name: item.name,
+                            unit: item.unit,
+                            cost_unit: item.cost_unit,
+                        });
+                        updated += 1;
+                    } else {
+                        await add({
+                            name: item.name,
+                            unit: item.unit,
+                            cost_unit: item.cost_unit,
+                        });
+                        created += 1;
+                    }
+                }
+
+                message.success(
+                    `XML cargado: ${created} nuevo(s), ${updated} actualizado(s).`
+                );
+            } catch (err) {
+                console.error('Error importing ingredients XML:', err);
+                const errMsg = err instanceof Error ? err.message : 'Error al procesar el archivo XML.';
+                message.error(errMsg);
+            } finally {
+                setImportingXml(false);
+                if (xmlInputRef.current) {
+                    xmlInputRef.current.value = '';
+                }
+            }
+        };
+        reader.readAsText(file);
+    };
 
     const handleOpenModal = (ingredient?: Ingredient) => {
         if (ingredient) {
@@ -140,15 +210,41 @@ export const IngredientsPanel = () => {
 
     return (
         <div className="rounded-2xl p-4 md:p-6 shadow-sm border h-full flex flex-col" style={{ background: colorBgContainer, borderColor: colorBorderSecondary }}>
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                 <Title level={5} style={{ margin: 0 }}>Catálogo de Insumos</Title>
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 w-full lg:w-auto">
                     <Input.Search 
                         placeholder="Buscar ingrediente..." 
                         allowClear 
                         onChange={(e) => setSearchText(e.target.value)}
-                        className="w-full sm:w-64"
+                        className="w-full sm:w-56"
                     />
+                    <input
+                        type="file"
+                        accept=".xml,text/xml,application/xml"
+                        ref={xmlInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleUploadXML}
+                    />
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button
+                            type="dashed"
+                            icon={<UploadOutlined />}
+                            loading={importingXml}
+                            onClick={() => xmlInputRef.current?.click()}
+                            className="flex-1 sm:flex-initial"
+                        >
+                            Cargar XML
+                        </Button>
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={handleDownloadXML}
+                            disabled={!ingredients?.length}
+                            className="flex-1 sm:flex-initial"
+                        >
+                            Descargar XML
+                        </Button>
+                    </div>
                     <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} className="bg-green-500 hover:bg-green-600 border-none rounded w-full sm:w-auto shadow-sm">
                         Nuevo Insumo
                     </Button>

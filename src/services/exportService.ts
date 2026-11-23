@@ -241,6 +241,89 @@ export function exportDemographicsXML(
     downloadBlob(xml, 'application/xml', `Demografia_Insights_${dayjs().format('YYYYMMDD')}.xml`);
 }
 
+// ─── Ingredients XML Export & Import ──────────────────────────────────────────
+
+export interface ParsedIngredientXML {
+    id?: string;
+    name: string;
+    unit: string;
+    cost_unit: number;
+}
+
+export function exportIngredientsXML(ingredients: Ingredient[]) {
+    const sorted = [...ingredients].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<ingredientes>\n';
+
+    sorted.forEach(ing => {
+        xml += '  <ingrediente>\n';
+        xml += `    <id>${escapeXml(ing.id)}</id>\n`;
+        xml += `    <nombre>${escapeXml(ing.name)}</nombre>\n`;
+        xml += `    <unidad>${escapeXml(ing.unit)}</unidad>\n`;
+        xml += `    <costoUnitario>${Number(ing.cost_unit || 0)}</costoUnitario>\n`;
+        xml += '  </ingrediente>\n';
+    });
+
+    xml += '</ingredientes>';
+    downloadBlob(xml, 'application/xml', `Insumos_Recetario_${dayjs().format('YYYYMMDD')}.xml`);
+}
+
+export function parseIngredientsXML(xmlText: string): ParsedIngredientXML[] {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+
+    const parserError = xmlDoc.querySelector('parsererror');
+    if (parserError) {
+        throw new Error('El archivo XML tiene un formato inválido.');
+    }
+
+    const nodes = Array.from(
+        xmlDoc.querySelectorAll('ingrediente, ingredient, item')
+    );
+
+    if (nodes.length === 0) {
+        throw new Error('No se encontraron nodos <ingrediente> en el archivo XML.');
+    }
+
+    const getTagText = (parent: Element, selectors: string[]): string => {
+        for (const sel of selectors) {
+            const el = parent.querySelector(sel);
+            if (el && el.textContent !== null) {
+                return el.textContent.trim();
+            }
+            const attr = parent.getAttribute(sel);
+            if (attr !== null) {
+                return attr.trim();
+            }
+        }
+        return '';
+    };
+
+    const parsed: ParsedIngredientXML[] = [];
+
+    nodes.forEach(node => {
+        const id = getTagText(node, ['id']);
+        const name = getTagText(node, ['nombre', 'name']);
+        const unit = getTagText(node, ['unidad', 'unit']) || 'Kg';
+        const costRaw = getTagText(node, ['costoUnitario', 'costo_unitario', 'cost_unit', 'costo', 'cost']);
+        const cleanCost = Number(costRaw.replace(/[$,\s]/g, ''));
+
+        if (!name) return;
+
+        parsed.push({
+            ...(id ? { id } : {}),
+            name,
+            unit,
+            cost_unit: Number.isFinite(cleanCost) && cleanCost >= 0 ? cleanCost : 0,
+        });
+    });
+
+    if (parsed.length === 0) {
+        throw new Error('No se encontraron ingredientes válidos con nombre en el XML.');
+    }
+
+    return parsed;
+}
+
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
 function downloadBlob(content: string, mimeType: string, filename: string) {
